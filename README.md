@@ -37,7 +37,7 @@ Repository: https://github.com/galen8183/yagpdb-cc
 
 ## Other resources
 
-- [YAGPDB CC Website](https://yagpdb-cc.github.io/) Official CC Repository ([direct link to repository](https://github.com/yagpdb-cc/yagpdb-cc/tree/master/src)
+- [YAGPDB CC Website](https://yagpdb-cc.github.io/) Official CC Repository ([direct link to repository](https://github.com/yagpdb-cc/yagpdb-cc/tree/master/src))
 - [YAGPDB Community & Support](https://discord.gg/4uY54rw) Official support server
 - [YAGPDB Documentation](https://docs.yagpdb.xyz/reference/templates) Official CC documentation
 - [YAGPDB Learning page](https://learn.yagpdb.xyz/) Official CC learning page
