@@ -1,0 +1,46 @@
+{{/*
+  Trigger Type: Command
+  Trigger: exportcc
+
+  Note: This command will send all your CCs as files in the channel the command is run in
+  Make sure you're in an appropriate channel before running this CC
+
+  Copyright (c): 2021 Galen CC
+  License: MIT
+  Repository: https://github.com/galen8183/yagpdb-cc
+*/}}
+
+{{if reFind `(.*\n){2}Administrator` (execAdmin "viewperms" .User.ID)}}
+{{if not .ExecData}}
+  {{$ccs := reFindAllSubmatches `\x60# (\d+):\x60 (?:\x60(.*)\x60: )?(\w+) - Group: \x60(.+)\x60` (exec "cc")}}
+  {{execCC .CCID nil 0 (sdict "CCs" $ccs "Sort" sdict)}}
+{{else}}
+  {{$ccs := .ExecData.CCs}} {{$sort := .ExecData.Sort}}
+  {{range seq 0 5}} {{if gt (len $ccs) .}}
+    {{- with index $ccs .}}
+      {{- $current := sdict "Trigger" (or (index . 2) (index . 3)) "Type" (index . 3) "CCID" (index . 1|toInt) "Group" (index . 4)}}
+      {{- $cc := exec "cc" $current.CCID}}
+      {{- $cc = slice $cc (reFind `\A.*\n\x60{3}txt\n` $cc|len) (len $cc|add -3)}}
+      {{- $msg := sendMessageRetID nil (complexMessage "content" (index . 0) "file" $cc)}}
+      {{- $current.Set "URL" (index (getMessage nil $msg).Attachments 0).URL}}
+      {{- if $group := $sort.Get $current.Group}} {{$sort.Set $current.Group ($group.Append $current)}}
+      {{- else}} {{$sort.Set $current.Group (cslice $current)}} {{end}}
+    {{- end}}
+  {{- end}} {{end}}
+  {{if gt (len $ccs) 5}}
+    {{$ccs = slice $ccs 5}}
+    {{execCC .CCID nil 5 (sdict "CCs" $ccs "Sort" $sort)}}
+  {{else}}
+    {{$file := ""}} {{$description := ""}}
+    {{range $k,$v := $sort}}
+      {{- $ccs := ""}} {{$links := ""}}
+      {{- range $v}}
+        {{- $ccs = printf "%s\n  > CCID: %d\n    - Trigger Type: %s\n    - Trigger: %s\n    - Link: %s\n" $ccs .CCID .Type .Trigger .URL}}
+        {{- $links = printf "%s | [#%d](%s)" $links .CCID .URL}}
+      {{- end}}
+      {{- $file = printf "%s\nGroup: %s\n%s" $file $k $ccs}}
+      {{- $description = printf "%s\nGroup: `%s`\n> %s" $description $k (slice $links 3)}}
+    {{- end}}
+    {{sendMessage nil (complexMessage "embed" (cembed "title" "CC Export Complete" "description" (print "Attached file contains relevant information on each CC\nDirect download links:\n" $description)) "file" $file)}}
+  {{end}}
+{{end}}{{else}}Insufficient permissions{{end}}
