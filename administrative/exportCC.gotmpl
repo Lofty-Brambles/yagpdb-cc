@@ -18,7 +18,7 @@
 {{if not .ExecData}}
   {{/* Checks for administrator permission */}}
   {{if reFind `(.*\n){2}Administrator` (execAdmin "viewperms" .User.ID)}}
-  {{$ccs := reFindAllSubmatches `\x60# (\d+):\x60 (?:\x60(.*)\x60: )?(\w+) - Group: \x60(.+)\x60` (exec "cc")}}
+  {{$ccs := reFindAllSubmatches `\x60#\s*(\d+):\x60 (?:\x60(.*)\x60: )?(\w+)? - Group: \x60(.+)\x60(?:\n|$)` (exec "cc")}}
   {{execCC .CCID nil 0 (sdict "CCs" $ccs "Sort" sdict)}}
   {{else}}Insufficient permissions{{end}}
 {{else}}
