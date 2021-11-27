@@ -16,11 +16,16 @@
   Self-exec to range through CCs
 */}}
 {{if not .ExecData}}
-  {{/* Checks for administrator permission */}}
-  {{if reFind `(.*\n){2}Administrator` (execAdmin "viewperms" .User.ID)}}
-  {{$ccs := reFindAllSubmatches `\x60#\s*(\d+):\x60 (?:\x60(.*)\x60: )?(\w+)? - Group: \x60(.+)\x60(?:\n|$)` (exec "cc")}}
-  {{execCC .CCID nil 0 (sdict "CCs" $ccs "Sort" sdict)}}
-  {{else}}Insufficient permissions{{end}}
+  {{if dbGet 1 "exportTimer"}} {{/* Verify that the command was run intentionally to avoid unwanted spam */}}
+    {{/* Checks for administrator permission */}}
+    {{if reFind `(.*\n){2}Administrator` (execAdmin "viewperms" .User.ID)}}
+    {{$ccs := reFindAllSubmatches `\x60#\s*(\d+):\x60 (?:\x60(.*)\x60: )?(\w+)? - Group: \x60(.+)\x60(?:\n|$)` (exec "cc")}}
+    {{execCC .CCID nil 0 (sdict "CCs" $ccs "Sort" sdict)}}
+    {{else}}Insufficient permissions{{end}}
+  {{else}}
+    {{print "**Warning**\nAre you sure you want to do this?\nAll CCs in this server will be sent as individual files, to this channel.\nIf yes, run the command again within the next minute."}}
+    {{dbSetExpire 1 "exportTimer" true 60}}
+  {{end}}
 {{else}}
   {{$ccs := .ExecData.CCs}} {{$sort := .ExecData.Sort}}
   {{range seq 0 5}} {{if gt (len $ccs) .}}
