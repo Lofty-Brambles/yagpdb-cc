@@ -41,6 +41,5 @@ Repository: https://github.com/galen8183/yagpdb-cc
 - [YAGPDB Community & Support](https://discord.gg/4uY54rw) Official support server
 - [YAGPDB Documentation](https://docs.yagpdb.xyz/reference/templates) Official CC documentation
 - [YAGPDB Learning page](https://learn.yagpdb.xyz/) Official CC learning page
-- [YAGPDB Control Panel](https://yagpdb.xyz/manage) CC management web interface (YAGPDB control panel)
-
+- [YAGPDB Control Panel](https://yagpdb.xyz/manage) CC management web interface/control panel
 [^1]: Credit to [Black Wolf](https://github.com/BlackWolfWoof) because I basically copied this entire readme from his
