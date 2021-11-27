@@ -54,6 +54,7 @@
       {{- $file = printf "%s\nGroup: %s\n%s" $file $k $ccs}}
       {{- $description = printf "%s\nGroup: `%s`\n> %s" $description $k (slice $links 3)}}
     {{- end}}
-    {{sendMessage nil (complexMessage "embed" (cembed "title" "CC Export Complete" "description" (print "Attached file contains relevant information on each CC\nDirect download links:\n" $description)) "file" $file)}}
+    {{sendMessage nil (cembed "title" "CC Export Complete" "description" (print "Attached file contains relevant information on each CC\nDirect download links:\n" $description))}}
+    {{sendMessage nil (complexMessage "file" $file)}}
   {{end}}
 {{end}}
