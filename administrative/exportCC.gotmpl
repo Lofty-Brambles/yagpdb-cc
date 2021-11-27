@@ -48,7 +48,7 @@
     {{range $k,$v := $sort}}
       {{- $ccs := ""}} {{$links := ""}}
       {{- range $v}}
-        {{- $ccs = printf "%s\n  > CCID: %d\n    - Trigger Type: %s\n    - Trigger: %s\n    - Link: %s\n" $ccs .CCID .Type .Trigger .URL}}
+        {{- $ccs = printf "%s\n  > CCID: %d\n    - Trigger Type: %s\n    - Trigger: %s\n    - Link: %s\n" $ccs .CCID (or .Type "None") (or .Trigger "None") .URL}}
         {{- $links = printf "%s | [#%d](%s)" $links .CCID .URL}}
       {{- end}}
       {{- $file = printf "%s\nGroup: %s\n%s" $file $k $ccs}}
