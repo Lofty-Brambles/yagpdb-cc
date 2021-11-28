@@ -28,7 +28,7 @@ Including the full MIT license in CCs is not necessary, due to the length of it 
 Please included the following license text when using code from this repository:
 
 ```
-Copyright (c): 2021 Galen CC
+Copyright (c): 2021 Galen 8183
 License: MIT
 Repository: https://github.com/galen8183/yagpdb-cc
 ```

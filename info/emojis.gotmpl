@@ -1,0 +1,21 @@
+{{/*
+  Trigger Type: Command
+  Trigger: emojis
+
+  Copyright (c): 2021 Galen 8183
+  License: MIT
+  Repository: https://github.com/galen8183/yagpdb-cc
+*/}}
+
+{{$anim := cslice}}
+{{$static := cslice}}
+
+{{range $e := .Guild.Emojis}}
+  {{- if .Animated}} {{$anim = $anim.Append (printf "<a:%s:%d>" $e.Name $e.ID)}}
+  {{- else}} {{$static = $static.Append (printf "<:%s:%d>" $e.Name $e.ID)}}
+{{- end}} {{end}}
+
+{{sendMessage nil (cembed
+  "title" (printf "%d Static | %d Animated | %d Total" (len $static) (len $anim) (add (len $static) (len $anim)))
+  "description" (printf "%s\n\n%s" (joinStr " " $static.StringSlice) (joinStr " " $anim.StringSlice))
+)}}
