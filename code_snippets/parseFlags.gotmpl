@@ -14,7 +14,7 @@
     "Test" ""
   }}
   {{$concat := false}} {{/* When set to true, repeated flags will be concatenated */}}
-  {{$robust := true}} {{/* Continue parsing if an invalid flag is encountered (and add to $d.ErrorFlags) */}}
+  {{$robust := false}} {{/* Continue parsing if an invalid flag is encountered (and add to $d.ErrorFlags) */}}
   {{$d := sdict "Message" "" "Flags" sdict "ErrorFlags" cslice}} {{/* Parsed data will be stored here */}}
 {{/* Variable declaration ends */}}
 

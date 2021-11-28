@@ -1,0 +1,42 @@
+{{/*
+  Trigger Type: Regex
+  Trigger: \A(?i)(?:\-|\?|<@!?204255221017214977>)\s*(?:caesar|shift|rot(?:ate)?)(?:\s+|$)
+
+  Copyright (c): 2021 Galen CC
+  License: MIT
+  Repository: https://github.com/galen8183/yagpdb-cc
+*/}}
+
+{{$error := (joinStr "\n" "```" "Caesar <Key:Whole Number> <Text:Text>" "Caesar bruteforce <Text:Text>" "```" "Invalid arguments provided:")}}
+{{$out := ""}} {{$file := ""}} {{$err := ""}}
+
+{{if gt (len .CmdArgs) 1}}
+  {{/* Single key shift */}} {{if and ($key := index .CmdArgs 0|toInt)}}
+    {{range toRune (slice .StrippedMsg (str $key|len|add 1))}}
+      {{- $current := .}}{{if or (and (gt . 96) (lt . 123)) (and (gt . 64) (lt . 91))}}
+        {{- $current = add . $key}}
+        {{- if or (gt $current 122) (and (gt $current 90) (lt . 91))}}{{$current = sub $current 26}} {{end}}
+      {{- end}}
+      {{- $out = printf "%s%c" $out $current}}
+    {{- end}}
+
+  {{/* Bruteforce */}} {{else if eq (index .Args 1|lower) "bf" "bruteforce"}}
+  {{$msg := slice .StrippedMsg (len (index .CmdArgs 0)|add 1)}}
+  {{if or (and .IsPremium (le (len $msg) 650)) (le (len $msg) 250)}}
+    {{range seq 0 26}}{{$key := .}}{{$out := ""}}
+      {{- range toRune $msg}}
+        {{- $current := .}}{{if or (and (gt . 96) (lt . 123)) (and (gt . 64) (lt . 91))}}
+          {{- $current = add . $key}}
+          {{- if or (gt $current 122) (and (gt $current 90) (lt . 91))}}{{$current = sub $current 26}}{{end}}
+        {{- end}}
+        {{- $out = printf "%s%c" $out $current}}
+      {{- end}}
+      {{- $file = printf "%sShift: %d - Text: %s\n" $file $key $out}}
+    {{- end}}
+  {{else}} {{$err = printf "Cannot bruteforce string of length `%d`" (len $msg)}}
+  {{end}} {{end}}
+{{end}}
+
+{{if $file}} {{sendMessage nil (complexMessage "file" $file)}}
+{{else if $out}} {{sendMessage nil (cembed "title" "Caesar Cipher Decode" "description" $out)}}
+{{else}} {{joinStr " " $error (or $err "Not enough arguments passed")}} {{end}}
