@@ -20,6 +20,13 @@ Might add a bio or something here at some point[^1]
 
 </details>
 
+<details><summary>Info</summary>
+
+- [Open Folder](info)
+  - [emojis](info/emojis.gotmpl)
+
+</details>
+
 ---
 
 ## License
