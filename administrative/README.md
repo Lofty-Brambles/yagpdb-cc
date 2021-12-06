@@ -12,5 +12,3 @@ Please note, this command will spam the channel you run it in
 
 To make downloading CCs easier, enable attachment archiving in ticket settings and run the export CC in a ticket.
 This will compile all your CCs as files into one convenient zip archive
-
-<!-- Advanced export CC command under developement --->
