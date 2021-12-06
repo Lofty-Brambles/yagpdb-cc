@@ -16,14 +16,16 @@ Might add a bio or something here at some point[^1]
 <details><summary>Code Snippets</summary>
 
 - [Open Folder](code_snippets)
+  - [caesar](code_snippets/caesar.gotmpl)
   - [parse flags](code_snippets/parseFlags.gotmpl)
 
 </details>
 
 <details><summary>Info</summary>
 
-- [Open Folder](info)
-  - [emojis](info/emojis.gotmpl)
+- [Open Folder](utility)
+  - [colourConvert](utility/colourConvert.gotmpl)
+  - [emojis](utility/emojis.gotmpl)
 
 </details>
 
