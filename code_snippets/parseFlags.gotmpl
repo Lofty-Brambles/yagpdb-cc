@@ -21,8 +21,8 @@
 
 {{/* Don't edit below (unless you want to learn/know what you're doing) */}}
 {{/* Parses flags and forces unflagged text into a flag ("Message") */}}
-{{$parsedData := reFindAllSubmatches `-(\S+)\s+((?:[^-]|\S-)*)(?:\s|$)` (print "-Message " .StrippedMsg)}}
-{{$d.Set "Message" (reReplace `\A\s*|\s*\z` (index $parsedData 0 2) "")}} {{/* Adds first flag (unflagged text) to $d.Message */}}
+{{$parsedData := reFindAllSubmatches `-(\S+)\s*((?:[^-]|\S-)*)(?:\s|$)` (print "-Message " .StrippedMsg)}}
+{{$d.Set "Message" (reReplace `\s*\z` (index $parsedData 0 2) "")}} {{/* Adds first flag (unflagged text) to $d.Message */}}
 
 {{/* Removes first 'flag' (unflagged text) and iterates through parsed flags */}}
 {{if gt (len $parsedData) 1}}{{range (slice $parsedData 1)}}{{if or $robust (not $d.ErrorFlags)}} {{/* If $robust == true, keep parsing even if invalid flags are detected */}}
