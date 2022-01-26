@@ -8,7 +8,7 @@
 */}}
 
 {{/* Variable declaration begins: */}}
-{{/* Add as many flags as desired - follow the format ["FlagName" ""] (flag name must be title case) */}}
+{{/* Add flags as desired - follow the format ["FlagName" ""] (flag name must be title case) */}}
   {{$availableFlags := sdict
     "Flag" ""
     "Test" ""
@@ -48,7 +48,7 @@
 {{$flags := ""}} {{$errors := ""}}
 {{range $k,$v := $d.Flags}} {{$flags = print $flags "\n  " $k ": " (json $v)}} {{end}}
 {{range $d.ErrorFlags}} {{$errors = print $errors "\n  " .}} {{end}}
-{{$data := reReplace "```" (printf "ErrorFlags:%s\nFlags:%s\nMessage:\n%s" $errors $flags $d.Message) "``\\`"}}
+{{$data := printf "ErrorFlags:%s\nFlags:%s\nMessage:\n%s" (or $errors "None") (or $flags "None") (or $d.Message "None")}}
 {{$description := printf "Settings:\n> Available Flags: `%s`\n> Concat? `%t`\n> Robust? `%t`\n```json\n%s\n```"
   (json $availableFlags) $concat $robust $data
 }}
