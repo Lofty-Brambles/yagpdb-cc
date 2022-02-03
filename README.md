@@ -21,21 +21,21 @@ General information on YAGPDB.xyz custom commands is available in the [documenta
 
 <details><summary>Code Snippets</summary>
 
-- [caesar](code_snippets/caesar.gotmpl)
-- [parse flags](code_snippets/parseFlags.gotmpl)
+- [Decode caesar cipher](code_snippets/caesar.gotmpl)
+- [Parse flags](code_snippets/parseFlags.gotmpl)
 
 </details>
 
-<details><summary>Tickets</summary>
+<details><summary>Tickets (under development)</summary>
 
-- [ticketConfig](tickets/ticketConfig.gotmpl
+- [Configuration](tickets/ticketConfig.gotmpl)
 
 </details>
 
 <details><summary>Info</summary>
 
-- [colourConvert](utility/colourConvert.gotmpl)
-- [emojis](utility/emojis.gotmpl)
+- [Convert colour](utility/colourConvert.gotmpl)
+- [Show server emojis](utility/emojis.gotmpl)
 
 </details>
 
