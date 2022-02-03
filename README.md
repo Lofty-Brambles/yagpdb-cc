@@ -15,7 +15,7 @@ General information on YAGPDB.xyz custom commands is available in the [documenta
 
 <details><summary>Administrative</summary>
 
-- [export CC](administrative/exportCC.gotmpl)
+- [Export all CCs](administrative/exportCC.gotmpl)
 
 </details>
 
@@ -51,7 +51,7 @@ Including the full [GPL v3 license](COPYING) in CCs is not feasible, due to the 
 You should instead include the following license text when using code from this repository:
 
 ```
-Copyright: Galen CC, 2021-2022
+Copyright: Galen CC, 2021-Present
 Source: https://github.com/galen8183/yagpdb-cc
 Released under license GPL version 3 (https://www.gnu.org/licenses/gpl-3.0.txt)
 ```
