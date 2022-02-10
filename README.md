@@ -7,6 +7,7 @@ If you need assistance with using or have any feedback on these CCs, you can eit
 
 If you don't know how to create a custom command, or just need a refresher/clarification, [this article](https://learn.yagpdb.xyz/the-custom-command-interface) explains the process.
 I have also included similar documentation within comments in CCs and the associated README files as is explained in the [official YAGPDB CC website](https://yagpdb-cc.github.io/adding-ccs).
+*Note: CCs with recommended regex triggers will include `-`, `?`, and mentioning the YAGPDB.xyz bot as prefixes.*
 If you still need further clarification on adding CCs, please don't contact me directly, and instead go to the [official support server](https://discord.com/invite/4udtcA5).
 
 General information on YAGPDB.xyz custom commands is available in the [documentation](https://docs.yagpdb.xyz/) and [learning course](https://learn.yagpdb.xyz/).
