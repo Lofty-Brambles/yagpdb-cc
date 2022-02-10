@@ -6,3 +6,7 @@ This is a work in progress, so don't expect anything to actually work as a ticke
 This README will be updated with proper documentation later on, as there isn't much point at the moment.
 
 Current progress: Figuring out specifics of Pedro's system, brainstorming processes, documenting general flow of the system
+
+<!---
+  {{dbDel 10 "ticket_cfg"}}
+--->

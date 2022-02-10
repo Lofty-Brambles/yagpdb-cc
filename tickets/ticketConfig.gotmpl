@@ -1,3 +1,9 @@
+{{/*
+  Copyright: Galen CC, 2021-Present
+  Source: https://github.com/galen8183/yagpdb-cc
+  Released under license GPL version 3 (https://www.gnu.org/licenses/gpl-3.0.txt)
+*/}}
+
 {{/* This system is a work in progress, it will not function as an actual ticket system. Check the README for updates */}}
 
 {{/* Configuration begins */}}
@@ -49,63 +55,77 @@
 {{$err := ""}}
 {{$gRoles := dict}}{{range .Guild.Roles}}{{$gRoles.Set .ID (eq .ID $.Guild.ID|or .Managed|not)}}{{end}}
 
-{{/* Check that all admin/mod/mention roles are valid */}}
+{{/* Check admin/mod/mention roles' validity */}}
 {{range $t, $v := sdict "Admin" $adminRoles "Mod" $modRoles "Mention" $mentionRoles}}
   {{- if le (len $v) 10}}{{range $v}}
-    {{- if (kindOf .|eq "int"|not)}}{{$err = printf "%s\n%s must be an integer, not %T" $err $t .}}
+    {{- if kindOf .|eq "int"|not}}{{$err = printf "%s\n%s must be an integer, not %T" $err $t .}}
     {{- else if not ($gRoles.Get .)}}{{$err = printf "%s\nInvalid %s role: %d" $err $t .}}{{end}}
   {{- else}}
     {{- if ne $t "Mention"}}{{$err = printf "%s\nNo %s roles defined (needs at least 1)" $err $t}}{{end}}
   {{- end}}{{else}}{{$err = printf "%s\nToo many %s roles defined (%d, max 10)" $err $t (len $v)}}{{end}}
 {{- end}}
 
+{{/* Check emojis are valid (unicode or custom) */}}
 {{range $t, $v := $emojis}}
   {{- if not $v}}{{$err = print $err "\nNo " $t " emoji provided"}}
   {{- else if not (reFind `^(((a:)?[\w~]{2,32}:\d{17,19})|[\x{1f1e6}-\x{1f1ff}]{2}|\p{So}\x{fe0f}?[\x{1f3fb}-\x{1f3ff}]?(\x{200D}\p{So}\x{fe0f}?[\x{1f3fb}-\x{1f3ff}]?)*|[#\d*]\x{FE0F}?\x{20E3})$` $v)}}{{$err = print $err "\nInvalid " $t " emoji provided"}}{{end}}
 {{- end}}
 
+{{/* Check ticket status names */}}
 {{range $t, $v := $status}}
   {{- if not $v}}{{$err = print $err "\nNo " $t " status name provided"}}
   {{- else if reFind `[^\w-]` $v}}{{$err = print $err "\nInvalid character in " $t " status name"}}
   {{- else if gt (len $v) 10}}{{$err = print $err "\n" $t " status name too long (max 10 chars)"}}{{end}}
 {{- end}}
 
+{{/* Check various IDs (channels, messages) */}}
 {{range $t, $v := $ids}}
   {{- if not $v}}{{$err = print $err "\nNo " $t " ID provided"}}
   {{- else if (kindOf $v|eq "int"|not)}}{{$err = printf "%s\n%s must be an integer, not %T" $err $t $v}}{{end}}
 {{- end}}
 {{if not (getMessage $ids.OpenChannel $ids.OpenMessage)}}{{$err = printf "%s\nDid not find open message with ID %d in channel %d" $err (toInt $ids.OpenMessage) (toInt $ids.OpenChannel)}}{{end}}
 
-
-{{$tmp := printf "```admin: %v\nmod: %v\nmention: %v\nemojis: %+v\nstatus: %+v\nids: %+v\nccs: %+v\ndelay: %d```" $adminRoles $modRoles $mentionRoles $emojis $status $ids $ccs $inactive}}
-
 {{if $err}}
-  {{print "```" $err "```" $tmp|sendMessage nil}}
+  {{/* Send error message */}}
+  {{printf "```admin: %v\nmod: %v\nmention: %v\nemojis: %+v\nstatus: %+v\nids: %+v\nccs: %+v\ndelay: %d``````\n%s```" $adminRoles $modRoles $mentionRoles $emojis $status $ids $ccs $inactive $err}}
 {{else}}
+  {{/* Add emojis to $cfg */}}
+  {{with $emojis}}
+    {{.Set "Op" .Open}}{{.Del "Open"}}
+    {{.Set "ReOp" .ReOpen}}{{.Del "ReOpen"}}
+    {{.Set "Del" .Delete}}{{.Del "Delete"}}
+    {{.Set "Cls" .Close}}{{.Del "Close"}}
+    {{.Set "CCls" .ConfirmClose}}{{.Del "ConfirmClose"}}
+    {{.Set "NCls" .CancelClose}}{{.Del "CancelClose"}}
+    {{.Set "AO" .AdminOnly}}{{.Del "AdminOnly"}}
+    {{.Set "Inf" .Info}}{{.Del "Info"}}
+    {{.Set "Tscp" .Transcript}}{{.Del "Transcript"}}
+  {{end}}
+
+  {{/* Add config settings to $cfg */}}
+  {{with $status}}
+    {{.Set "Op" .Open}}{{.Del "Open"}}
+    {{.Set "Cls" .Closed}}{{.Del "Closed"}}
+    {{.Set "Slv" .Solving}}{{.Del "Solving"}}
+  {{end}}
+
+  {{with $ids}}
+    {{.Set "Cat" .TicketCategory}}{{.Del "TicketCategory"}}
+    {{.Set "Ch" .MasterChannel}}{{.Del "MasterChannel"}}
+    {{.Set "OpCh" .OpenChannel}}{{.Del "OpenChannel"}}
+    {{.Set "OpMsg" .OpenMessage}}{{.Del "OpenMessage"}}
+  {{end}}
+
+  {{/* Create config sdict, set db entry */}}
   {{$cfg := sdict
+    "Em" $emojis
+    "Stat" $status
+    "ID" $ids
     "Rl_Adm" $adminRoles
     "Rl_Mod" $modRoles
     "Rl_Mnt" $mentionRoles
     "Dla" $inactive
   }}
-
-  {{with $emojis}}
-    {{$cfg.Set "Em_Op" .Open}}{{$cfg.Set "Em_ReOp" .ReOpen}}{{$cfg.Set "Em_Del" .Delete}}
-    {{$cfg.Set "Em_Cls" .Close}}{{$cfg.Set "Em_CCls" .ConfirmClose}}{{$cfg.Set "Em_NCls" .CancelClose}}
-    {{$cfg.Set "Em_AO" .AdminOnly}}{{$cfg.Set "Em_Inf" .Info}}{{$cfg.Set "Em_Tscp" .Transcript}}
-  {{end}}
-
-  {{with sdict "ID" $ids "Stat" $status}}
-    {{$cfg.Set "St_Op" .Stat.Open}}
-    {{$cfg.Set "St_Cls" .Stat.Closed}}
-    {{$cfg.Set "St_Slv" .Stat.Solving}}
-    {{$cfg.Set "ID_Cat" .ID.TicketCategory}}
-    {{$cfg.Set "ID_Ch" .ID.MasterChannel}}
-    {{$cfg.Set "ID_OpCh" .ID.OpenChannel}}
-    {{$cfg.Set "ID_OpMsg" .ID.OpenMessage}}
-  {{end}}
-
   {{/* dbSet 10 "ticket_cfg" $cfg */}}
-
-  {{print "Tickets configuration successful! You can now delete cc #" .CCID " (ticket config cc)\n" $tmp|complexMessage "file" (json $cfg) "content"|sendMessage nil}}
+  {{print "Tickets configuration successful! You can now delete cc #" .CCID " (ticket config cc)"|complexMessage "file" (json $cfg) "content"|sendMessage nil}}
 {{end}}
