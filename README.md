@@ -32,9 +32,10 @@ General information on YAGPDB.xyz custom commands is available in the [documenta
 
 </details>
 
-<details><summary>Info</summary>
+<details><summary>Utility</summary>
 
 - [Convert colour](utility/colourConvert.gotmpl)
+- [Display Data Contents](utility/displayData.gotmpl)
 - [Show server emojis](utility/emojis.gotmpl)
 
 </details>
