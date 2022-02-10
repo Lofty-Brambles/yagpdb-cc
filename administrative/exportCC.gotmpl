@@ -16,45 +16,53 @@
   Self-exec to range through CCs
 */}}
 {{if not .ExecData}}
-  {{if dbGet 1 "exportTimer"}} {{/* Verify that the command was run intentionally to avoid unwanted spam */}}
-    {{/* Checks for administrator permission */}}
+  {{if dbGet 10 "exportTimer"}}{{/* Verify that the command was run intentionally to avoid unwanted spam */}}
+    {{dbDel 10 "exportTimer"}}
+
     {{if reFind `(.*\n){2}Administrator` (execAdmin "viewperms" .User.ID)}}
-    {{$ccs := reFindAllSubmatches `\x60#\s*(\d+):\x60 (?:\x60(.*)\x60: )?(\w+)? - Group: \x60(.+)\x60(?:\n|$)` (exec "cc")}}
-    {{execCC .CCID nil 0 (sdict "CCs" $ccs "Sort" sdict)}}
+      {{sendMessage nil (cembed "title" "Export CCs" "description" "Beginning CC export in 5 seconds!")}}
+      {{$ccs := reFindAllSubmatches `\x60#\s*(\d+):\x60 (?:\x60(.*)\x60: )?(\w+)? - Group: \x60(.+)\x60(?:\n|$)` (exec "cc")}}
+      {{execCC .CCID nil 5 (sdict "CCs" $ccs "Sort" sdict)}}
     {{else}}Insufficient permissions{{end}}
   {{else}}
     {{print "**Warning**\nAre you sure you want to do this?\nAll CCs in this server will be sent as individual files, to this channel.\nIf yes, run the command again within the next minute."}}
-    {{dbSetExpire 1 "exportTimer" true 60}}
+    {{dbSetExpire 10 "exportTimer" true 60}}
   {{end}}
 {{else}}
-  {{$ccs := .ExecData.CCs}} {{$sort := .ExecData.Sort}}
-  {{range seq 0 5}} {{if gt (len $ccs) .}}
-    {{- with index $ccs .}} {{/* Send CC in file and add data to sorted data */}}
+  {{$ccs := .ExecData.CCs}}{{$sort := .ExecData.Sort}}
+  {{range seq 0 5}}{{if gt (len $ccs) .}}
+    {{- with index $ccs .}}{{/* Send CC in file and add data to sorted data */}}
       {{- $current := sdict "Trigger" (or (index . 2) (index . 3)) "Type" (index . 3) "CCID" (index . 1|toInt) "Group" (index . 4)}}
       {{- $cc := exec "cc" $current.CCID}}
       {{- $cc = slice $cc (reFind `\A.*\n\x60{3}txt\n` $cc|len) (len $cc|add -3)}}
       {{- $msg := sendMessageRetID nil (complexMessage "content" (index . 0) "file" $cc)}}
-      {{- $current.Set "URL" (index (getMessage nil $msg).Attachments 0).URL}} {{/* Get file download URL from sent message */}}
+      {{- $current.Set "URL" (index (getMessage nil $msg).Attachments 0).URL}}{{/* Get file download URL from sent message */}}
       {{- /* Sort into correct groups */}}
       {{- if $group := $sort.Get $current.Group}} {{$sort.Set $current.Group ($group.Append $current)}}
-      {{- else}} {{$sort.Set $current.Group (cslice $current)}} {{end}}
+      {{- else}}{{$sort.Set $current.Group (cslice $current)}}{{end}}
     {{- end}}
-  {{- end}} {{end}}
-  {{if gt (len $ccs) 5}} {{/* If more CCs are left, self-exec again */}}
+  {{- end}}{{end}}
+  {{if gt (len $ccs) 5}}{{/* If more CCs are left, self-exec again */}}
     {{$ccs = slice $ccs 5}}
     {{execCC .CCID nil 5 (sdict "CCs" $ccs "Sort" $sort)}}
-  {{else}} {{/* Format CCs into file and embed description */}}
-    {{$file := ""}} {{$description := ""}}
+  {{else}}{{/* Format CCs into file and embed description */}}
+    {{$file := ""}}{{$desc := ""}}
     {{range $k,$v := $sort}}
-      {{- $ccs := ""}} {{$links := ""}}
+      {{- $ccs := ""}}{{$links := ""}}
       {{- range $v}}
-        {{- $ccs = printf "%s\n  > CCID: %d\n    - Trigger Type: %s\n    - Trigger: %s\n    - Link: %s\n" $ccs .CCID (or .Type "None") (or .Trigger "None") .URL}}
+        {{- $ccs = printf "%s\n%6s: %d\n%18s: %s\n%11s: %s\n%8s: %s\n" $ccs .CCID "CCID" "Trigger type" (or .Type "None") "Trigger" (or .Trigger "None") "File" .URL}}
         {{- $links = printf "%s | [#%d](%s)" $links .CCID .URL}}
       {{- end}}
       {{- $file = printf "%s\nGroup: %s\n%s" $file $k $ccs}}
-      {{- $description = printf "%s\nGroup: `%s`\n> %s" $description $k (slice $links 3)}}
+      {{- $desc = printf "%s\nGroup: `%s`\n> %s" $desc $k (slice $links 3)}}
     {{- end}}
-    {{sendMessage nil (cembed "title" "CC Export Complete" "description" (print "Attached file contains relevant information on each CC\nDirect download links:\n" $description))}}
-    {{sendMessage nil (complexMessage "file" $file)}}
+
+    {{$desc = print "Attached file contains relevant information on each CC\nDirect download links:\n" $desc}}
+    {{if gt (len $desc) 4000}}{{$desc = "⚠️ **Attention:** Unfortunately, the list of direct download links is too long. Please refer to the attached file or above messages."}}{{end}}
+
+    {{sendMessage nil (complexMessage
+      "file" $file
+      "embed" (sdict "title" "CC Export Complete" "description" $desc)
+    )}}
   {{end}}
 {{end}}

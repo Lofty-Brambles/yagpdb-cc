@@ -2,13 +2,11 @@
 
 ## Export CC
 
-| WARNING: This will send all your CCs as seperate files, causing spam in the channel you run it in
+| WARNING: This will send all your CCs as seperate files/messages, causing spam with a significant number of CCs
 | --- |
 
 Exports all your CCs as text files and provides direct download links to each.
-This command can only be run by administrators (unless you edit it!)
+This command, by default, can only be run by administrators.
 
-Please note, this command will spam the channel you run it in
-
-To make downloading CCs easier, enable attachment archiving in ticket settings and run the export CC in a ticket.
-This will compile all your CCs as files into one convenient zip archive
+To make downloading CCs easier, enable attachment archiving in ticket settings and run this CC in a ticket.
+Upon closing the ticket, it will compile all your CCs as files into a zip archive.
