@@ -15,5 +15,5 @@ Example: (will add example gif at some point, essentially not providing text wil
 
 ## Caesar Decoder
 
-Simple script to encode/decode or bruteforce the [caesar cipher](https://en.wikipedia.org/wiki/Caesar_cipher)
-Brute force limit of 250/650 characters for free/premium respectively (will otherwise exceed max operation limit)
+Simple script to encode/decode or bruteforce the [caesar cipher](https://en.wikipedia.org/wiki/Caesar_cipher).
+Brute force limit of 250/650 characters for free/premium respectively (will otherwise exceed max operation limit).
