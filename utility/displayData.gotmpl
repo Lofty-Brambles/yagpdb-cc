@@ -126,7 +126,7 @@
   {{- if gt $chars 4000}}
     {{- $desc = print $desc "\nRequested data is too large to display in an embed, please refer to the attached file."}}
     {{- $msg.Set "file" $data.FmtdText}}
-  {{- else if $file}}
+  {{- else if or $file $query.File}}
     {{- /* Forced file output -- Useful for viewing, for example, messages with code blocks */}}
     {{- $desc = print $desc "\nForced file output, refer to the attached file."}}
     {{- $msg.Set "file" $data.FmtdText}}
@@ -137,7 +137,7 @@
 
   {{- /* If length is over 90k chars, send multiple files (max file size is 100kb) */}}
   {{- if ge $chars 90000}}
-    {{- deleteMessage nil (sendMessageRetID nil "⚠️ **Warning** - Data is over 90k chars long. It will be sent in multiple files.") 15}}{{/* Notify user about length before sending files, short delay */}}{{sleep 5}}
+    {{- if not $query.NoEmbed}}{{deleteMessage nil (sendMessageRetID nil "⚠️ **Warning** - Data is over 90k chars long. It will be sent in multiple files.") 15}}{{/* Notify user about length before sending files, short delay */}}{{sleep 5}}{{end}}
     {{- /* Get number of files necessary to send full data (without remainder) */}}
     {{- $count := div $chars 90000}}
     {{- range seq 0 $count}}
@@ -154,5 +154,6 @@
 
   {{- /* Send (final) output message */}}
   {{- $msg.embed.Set "description" $desc}}
+  {{- if $query.NoEmbed}}{{$msg.Del "embed"}}{{end}}
   {{- sendMessage nil (complexMessage $msg)}}
 {{- end}}

@@ -36,7 +36,11 @@ It supports being invoked by `execCC`, with `.ExecData` being an sdict (fields s
 {{execCC CCID nil 0 $data}}
 ```
 ```go
-{{/* Supports any type target (fully unsupported types will be displayed as JSON) */}}
+{{/*
+  Supports any type target (fully unsupported types will be displayed as JSON).
+  File will force file output, and is equivalent to the -file flag
+  NoEmbed will remove the regular embed. File must also be enabled (unless output is oversized).
+*/}}
 
 {{$data := sdict
   "Name" "Custom Target"
@@ -45,6 +49,8 @@ It supports being invoked by `execCC`, with `.ExecData` being an sdict (fields s
     "OtherKey" 12345
     "Another" "This one is a string!"
   )
+  "File" true
+  "NoEmbed" true
 }}
 
 {{execCC CCID nil 0 $data}}
