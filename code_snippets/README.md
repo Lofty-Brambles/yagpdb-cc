@@ -2,18 +2,18 @@
 
 ## Flag Parser
 
-Exactly what it sounds like, this can be used to parse flags for flexible command arguments.
-Your templating can be put after the main block of code, in place of the example output.
+Exactly what it sounds like, this can be used to parse flags for flexible command arguments.  
+Your templating can be put after the main block of code, in place of the example output.  
 
-The provided example output helps for setting up flags, and shows all parsed data formatted in an embed.
-This allows for easy setup and a demonstration of how to retrieve parsed flags.
+The provided example output helps for setting up flags, and shows all parsed data formatted in an embed.  
+This allows for easy setup and a demonstration of how to retrieve parsed flags.  
 
-Flag contents are parsed as strings or boolean values, depending on whether or not text is given after the flag.
-Example: (will add example gif at some point, essentially not providing text will parse the flag as a boolean 'true')
+Flag contents are parsed as strings or boolean values, depending on whether or not text is given after the flag.  
+Example: (will add example gif at some point, essentially not providing text will parse the flag as a boolean 'true')  
 
 ---
 
 ## Caesar Decoder
 
-Simple script to encode/decode or bruteforce the [caesar cipher](https://en.wikipedia.org/wiki/Caesar_cipher).
-Brute force limit of 250/650 characters for free/premium respectively (will otherwise exceed max operation limit).
+Simple script to encode/decode or bruteforce the [caesar cipher](https://en.wikipedia.org/wiki/Caesar_cipher).  
+Brute force limit of 250/650 characters for free/premium respectively (will otherwise exceed max operation limit).  
