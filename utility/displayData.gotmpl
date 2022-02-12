@@ -9,7 +9,7 @@
 
 {{- /* Set up variables */}}
 {{- $err := ""}}{{$syntax := joinStr "\n" "```" "Viewdata help" "Viewdata <Name:Text>" "Viewdata <Flag> [Flags]" "``````" "[-m m:Message ID/Mention - Target message]" "[-c c:Channel ID/Mention - Target channel]" "[-u u:User ID/Mention - Target user/member]" "[-r r:Role ID/Mention - Target guild role]" "[-e e:Emoji ID/Mention - Target guild emoji]" "[-voice voice:User ID/Mention - Target user's voice state]" "[-link link:Text - Link to channel or message]" "[-file file:Switch - Force file output]" "```"}}
-{{- $query := sdict "Name" "" "Target" false}}{{$file := false}}
+{{- $query := sdict "Name" "" "Target" false}}
 
 {{- /* Parse query, flags and/or field name -- doesn't */}}
 {{- range reFindAllSubmatches `(?i)\B-([mcure]|voice|link)\s+(?:(\d{17,19})|<(?:\#|@[!&]?|a?:[\w~]+:)(\d{17,19})>|https://(?:\w+\.)?discord(?:app)?\.com/channels/(\d+)/(\d+)(?:/(\d+))?)|(?:\B-(file)|([a-z]+))\b` (or .StrippedMsg "")}}
@@ -25,7 +25,7 @@
   {{- else if eq $name "u"}}{{$query = sdict "Name" "Member" "Target" (getMember $id)}}
   {{- else if eq $name "r"}}{{$query = sdict "Name" "Role" "Target" (getRole $id)}}
   {{- else if eq $name "e"}}{{$query = sdict "Name" "Emoji" "Target" ($.Guild.GetEmoji $id)}}
-  {{- else if index . 7}}{{$file = true}}
+  {{- else if index . 7}}{{$query.Set "File" true}}
   {{- else if not (or $query.Name $query.MessageID $query.ChannelID)}}{{index . 8|title|$query.Set "Name"}}{{$ := sdict $}}
     {{- /* If no current target, use first text input -- This allows for running, for example, 'viewdata CmdArgs "view this arg" and these', without having to first send a message and then target said message */}}
     {{- if $tmpData := or ($.Get $query.Name) (lower $query.Name|title|$.Get)}}
@@ -34,7 +34,7 @@
   {{- end}}
 {{- else}}
   {{- with .ExecData}}
-    {{- if eq (kindOf .) "map"}}
+    {{- if eq (kindOf .) "map" "ptr"}}
       {{- if .Target}}{{$query = sdict .}}
       {{- else}}{{$query.Set "Target" .}}{{end}}
     {{- else}}
@@ -56,58 +56,64 @@
 {{- /* Check if null target (and no parsing error) */}}
 {{- if not (or $err $query.Target)}}{{$err = "Invalid target data"}}{{end}}
 
-{{- /* Ignore errors if query is "help"/"h" */}}
-{{- if eq (str $query.Name) "Help" "H"}}{{sendMessage nil (cembed
+{{- $query.Set "Name" (str $query.Name)}}
+
+{{- /* Ignore errors for help */}}
+{{- if eq $query.Name "Help" "H"}}{{sendMessage nil (cembed
   "title" "Viewdata/Data/Structure/Struct"
-  "description" (print $syntax "\nDisplays specified CC data in a human-readable format\nRecursively deconstructs supported objects, including those contained in slices")
+  "description" (print $syntax "\nDisplays a various data in a human-readable format\nRecursively deconstructs most composite datatypes")
 )}}
-{{- else if $err}}{{print $syntax "\nInvalid arguments passed: " $err}}{{/* Print correct syntax and error */}}
+{{- else if $err}}{{/* Mimic default error message (syntax + error) */}}
+  {{- if not $query.NoErr}}{{print $syntax "\nInvalid arguments passed: " $err}}{{end}}
 {{- else}}{{/* Valid query, begin parsing/"deconstructing" data */}}
   {{- /*
     Name     : Field name of current data or index of current element
     Target   : Actual data to format
     FmtdText : Current formatted text to concatenate onto
     Indent   : Width of indent (added with printf, width of 2 spaces/level)
-    Guild    : Used to circumvent bug in structToSdict, see https://github.com/botlabs-gg/yagpdb/pull/1122 -- Todo: remove this when aforementioned PR is implemented
+    Guild    : Used to circumvent bug in structToSdict, see https://github.com/botlabs-gg/yagpdb/pull/1122
   */}}
   {{- $data := sdict
-    "Name" (str $query.Name)
-    "Target" $query.Target
+    "Name"     $query.Name
+    "Target"   $query.Target
     "FmtdText" ""
-    "Indent" 0
-    "Guild" .Guild
+    "Indent"   0
+    "Width"    (or $query.Width 10)
+    "Guild"    .Guild
   }}
 
   {{- /* Execute in line with target data */}}
   {{- block "deconstruct" $data}}
-    {{- /* Make current data iterable (sdict or cslice) */}}
-    {{- $obj := sdict .Name .Target}}{{$t := kindOf .Target}}{{$width := 10}}
-    {{- if eq $t "ptr" "struct"}}{{$t = printf "%T" .Target}}
-      {{- /* Circumvent bug with structToSdict -- Todo: remove this branching when fix in yagpdb pull 1122 is released */}}
-      {{- if eq $t "dstate.ChannelState"}}{{$obj = $.Guild.GetChannel .Target.ID}}
-      {{- else if eq $t "discordgo.Role"}}{{$obj = $.Guild.GetRole .Target.ID}}
-      {{- else if eq $t "discordgo.Emoji"}}{{$obj = $.Guild.GetEmoji .Target.ID}}
-      {{- else if eq $t "discordgo.VoiceState"}}{{$obj = $.Guild.GetVoiceState .Target.UserID}}
+    {{- /* Make object iterable */}}
+    {{- $obj := sdict}}{{$t := sdict "S" (kindOf .Target) "L" (printf "%T" .Target)}}
+    {{- if or (eq $t.S "map") (eq $t.L "templates.SDict" "*templates.SDict" "templates.Dict" "*templates.Dict")}}{{$obj = .Target}}
+    {{- else if eq $t.S "ptr" "struct"}}
+      {{- /* Circumvent structToSdict bug -- Todo: remove when pull 1122 is released */}}
+      {{- if eq $t.L "dstate.ChannelState"}}{{$obj = $.Guild.GetChannel .Target.ID}}
+      {{- else if eq $t.L "discordgo.Role"}}{{$obj = $.Guild.GetRole .Target.ID}}
+      {{- else if eq $t.L "discordgo.Emoji"}}{{$obj = $.Guild.GetEmoji .Target.ID}}
+      {{- else if eq $t.L "discordgo.VoiceState"}}{{$obj = $.Guild.GetVoiceState .Target.UserID}}
       {{- else}}{{$obj = .Target}}{{end}}{{$obj = structToSdict $obj}}
-    {{- else if eq $t "slice"}}{{$obj = .Target}}{{$width = 3}}
-    {{- else if eq $t "map"}}{{$obj = sdict .Target}}{{end}}
+    {{- else if eq $t.S "slice"}}{{$obj = .Target}}{{.Set "Width" 3}}
+    {{- else}}{{$obj = sdict .Name .Target}}{{end}}
 
-    {{- /* Iteratively format data, recurse if slice, struct, or map (sdict) */}}
+    {{- /* Format data, recurse if possible */}}
     {{- range $n, $val := $obj}}
-      {{- if and (eq ($type:=kindOf $val) "ptr" "struct" "slice") $val}}
+      {{- if and (eq ($type:=kindOf $val) "map" "ptr" "struct" "slice") $val}}
         {{- $ext := $type}}{{if eq $ext "ptr"}}{{$ext = "struct"}}{{end}}
         {{- $new := sdict
-          "Name" $.Name
-          "Target" $val
+          "Name"     $.Name
+          "Target"   $val
           "FmtdText" ""
-          "Indent" (add $.Indent 2)
-          "Guild" $.Guild
+          "Indent"   (add $.Indent 2)
+          "Width"    $.Width
+          "Guild"    $.Guild
         }}
 
         {{- template "deconstruct" $new}}
-        {{- /* Format current data (Following 3 lines) */}}
-        {{- printf "%s%*s%s (%s - %T):\n%s\n" $.FmtdText $.Indent "" (str $n) $ext $val $new.FmtdText|$.Set "FmtdText"}}
-      {{- else}}{{printf "%s%*s%-*s: %s\n" $.FmtdText $.Indent "" $width (str $n) (json $val)|$.Set "FmtdText"}}{{end}}
+        {{- /* Format current data (next 3 lines) */}}
+        {{- printf "%s%*s%-*s:\n%s\n" $.FmtdText $.Indent "" $.Width (printf "%v (%s - %T)" $n $ext $val) $new.FmtdText|$.Set "FmtdText"}}
+      {{- else}}{{printf "%s%*s%-*v: %s\n" $.FmtdText $.Indent "" $.Width $n (json $val)|$.Set "FmtdText"}}{{end}}
     {{- else}}{{printf "%*sUnsupported datatype, refer to JSON data:\n%[1]*s%s\n" $.Indent "" (json $.Target)|$.Set "FmtdText"}}{{end}}
   {{- end}}
 
@@ -122,7 +128,6 @@
     "User"                  (sdict "Discord" "user#user-object"          "Yag" "user")
   }}
 
-  {{- /* Declare message component variables */}}
   {{- $desc := ""}}
   {{- $msg := sdict "embed" (or $query.Embed (sdict "title" $query.Name))}}
 
@@ -131,39 +136,38 @@
     {{- $desc = printf "[Discord Developer Docs](https://discord.com/developers/docs/resources/%s) | [YAGPDB Template Docs](https://docs.yagpdb.xyz/reference/templates#%s)" .Discord .Yag}}
   {{- end}}
 
-  {{- /* If length is over 4000 chars, use file output */}}
+  {{- /* Send file if length > 4000 */}}
   {{- $chars := len $data.FmtdText}}
   {{- if gt $chars 4000}}
     {{- $desc = print $desc "\nRequested data is too large to display in an embed, please refer to the attached file."}}
     {{- $msg.Set "file" $data.FmtdText}}
-  {{- else if or $file $query.File}}
-    {{- /* Forced file output -- Useful for viewing, for example, messages with code blocks */}}
+  {{- else if $query.File}}
+    {{- /* Forced file output */}}
     {{- $desc = print $desc "\nForced file output, refer to the attached file."}}
     {{- $msg.Set "file" $data.FmtdText}}
   {{- else}}
-    {{- /* Add to code block with JSON highlighting */}}
+    {{- /* Default output */}}
     {{- $desc = print $desc "\n```json\n" $data.FmtdText "```"}}
   {{- end}}
 
-  {{- /* If length is over 90k chars, send multiple files (max file size is 100kb) */}}
+  {{- /* Send multiple files if necessary (over 90k chars, max is 100k) */}}
   {{- if ge $chars 90000}}
     {{- if not $query.NoEmbed}}{{deleteMessage nil (sendMessageRetID nil "⚠️ **Warning** - Data is over 90k chars long. It will be sent in multiple files.") 15}}{{/* Notify user about length before sending files, short delay */}}{{sleep 5}}{{end}}
-    {{- /* Get number of files necessary to send full data (without remainder) */}}
+    {{- /* Number of files -1, remainder sent with final embed */}}
     {{- $count := div $chars 90000}}
     {{- range seq 0 $count}}
-      {{- /* Get current section, send as file, get file URL, add to $desc */}}
+      {{- /* Send current section, add file URL to $desc */}}
       {{- $file := slice $msg.file (mult . 90000) (add . 1|mult 90000)}}
       {{- $mID := complexMessage "file" $file|sendMessageRetID nil}}
       {{- $desc = printf "%s\nFile %d - [Download](%s) | [Jump To Message](https://discord.com/channels/%d/%d/%d)" $desc (add . 1) (index ($m:=getMessage nil $mID).Attachments 0).URL $.Guild.ID $m.ChannelID $m.ID}}
     {{- end}}
 
-    {{- /* Set last file, add length warning */}}
     {{- $desc = print $desc "\n\n⚠️ **Warning** - Data is over 90k chars long, see linked file(s) for full data."}}
     {{- slice $msg.file (mult $count 90000)|$msg.Set "file"}}
   {{- end}}
 
-  {{- /* Send (final) output message */}}
   {{- $msg.embed.Set "description" $desc}}
-  {{- if $query.NoEmbed}}{{$msg.Del "embed"}}{{end}}
+  {{- if $query.NoEmbed}}{{$msg.Del "embed"}}{{end}}{{/* execCC NoEmbed option */}}
+
   {{- sendMessage nil (complexMessage $msg)}}
 {{- end}}
