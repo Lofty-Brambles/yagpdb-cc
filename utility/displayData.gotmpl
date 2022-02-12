@@ -12,20 +12,21 @@
 {{- $query := sdict "Name" "" "Target" false}}
 
 {{- /* Parse query, flags and/or field name -- doesn't */}}
-{{- range reFindAllSubmatches `(?i)\B-([mcure]|voice|link)\s+(?:(\d{17,19})|<(?:\#|@[!&]?|a?:[\w~]+:)(\d{17,19})>|https://(?:\w+\.)?discord(?:app)?\.com/channels/(\d+)/(\d+)(?:/(\d+))?)|(?:\B-(file)|([a-z]+))\b` (or .StrippedMsg "")}}
-  {{- $name := index . 1}}{{$id := or (index . 2) (index . 3)|toInt}}
+{{- range reFindAllSubmatches `(?i)\B-([mcure]|voice|link)\s+(?:(\d{17,19})|<(?:\#|@[!&]?|a?:[\w~]+:)(\d{17,19})>|https://(?:\w+\.)?discord(?:app)?\.com/channels/(\d+)/(\d+)(?:/(\d+))?)|(?:\B-(file|reply)|([a-z]+))\b` (or .StrippedMsg "")}}
+  {{- $name := or (index . 1) (index . 7)|lower}}{{$id := or (index . 2) (index . 3)|toInt}}
 
   {{- /* Set target data from flag/arg */}}
   {{- if eq $name "link"}}
     {{- if eq (index . 4|toInt) $.Guild.ID}}{{$query = sdict "Name" "Message" "ChannelID" (index . 5|toInt) "MessageID" (index . 6|toInt)}}
     {{- else}}{{$err = print "Invalid guild `%d` (I can only see this guild!)" (index . 4)}}{{end}}
+  {{- else if and (eq $name "reply") $.Message.ReferencedMessage}}{{$query.Set "MessageID" $.Message.ReferencedMessage.ID}}
   {{- else if eq $name "c"}}{{$query.Set "ChannelID" $id}}
   {{- else if eq $name "m"}}{{$query.Set "MessageID" $id}}
   {{- else if eq $name "voice"}}{{$query = sdict "Name" "Voice State" "Target" ($.Guild.GetVoiceState $id)}}
   {{- else if eq $name "u"}}{{$query = sdict "Name" "Member" "Target" (getMember $id)}}
   {{- else if eq $name "r"}}{{$query = sdict "Name" "Role" "Target" (getRole $id)}}
   {{- else if eq $name "e"}}{{$query = sdict "Name" "Emoji" "Target" ($.Guild.GetEmoji $id)}}
-  {{- else if index . 7}}{{$query.Set "File" true}}
+  {{- else if eq $name "file"}}{{$query.Set "File" true}}
   {{- else if not (or $query.Name $query.MessageID $query.ChannelID)}}{{index . 8|title|$query.Set "Name"}}{{$ := sdict $}}
     {{- /* If no current target, use first text input -- This allows for running, for example, 'viewdata CmdArgs "view this arg" and these', without having to first send a message and then target said message */}}
     {{- if $tmpData := or ($.Get $query.Name) (lower $query.Name|title|$.Get)}}
