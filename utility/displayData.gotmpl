@@ -153,7 +153,7 @@
 
   {{- /* Send multiple files if necessary (over 90k chars, max is 100k) */}}
   {{- if ge $chars 90000}}
-    {{- if not $query.NoEmbed}}{{deleteMessage nil (sendMessageRetID nil "⚠️ **Warning** - Data is over 90k chars long. It will be sent in multiple files.") 15}}{{/* Notify user about length before sending files, short delay */}}{{sleep 5}}{{end}}
+    {{- if not (or $query.NoEmbed $query.NoErr)}}{{deleteMessage nil (sendMessageRetID nil "⚠️ **Warning** - Data is over 90k chars long. It will be sent in multiple files.") 15}}{{/* Notify user about length before sending files, short delay */}}{{sleep 5}}{{end}}
     {{- /* Number of files -1, remainder sent with final embed */}}
     {{- $count := div $chars 90000}}
     {{- range seq 0 $count}}
