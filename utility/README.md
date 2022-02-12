@@ -20,37 +20,29 @@ Like the `json` function, it recursively "deconstructs" a target object and disp
 It supports being invoked by `execCC`, with `.ExecData` being an sdict (fields shown below). This is helpful for debugging other CCs.  
 
 ```go
-{{/* Example of triggering with execCC */}}  
-
-{{$data := sdict
-  "Name" "Resource Link Keyword/Embed Title"
-  "Embed" (sdict
-    "title" "This field overwrites parent Name field in embed title"
-    "author" (sdict "name" .User.String)
-    "description" "Description field will always be overwritten, regardless of if file is too large"
-    "timestamp" currentTime
-  )
-  "Target" .User
-}}
-
-{{execCC CCID nil 0 $data}}
-```
-```go
 {{/*
   Supports any type target (fully unsupported types will be displayed as JSON).
-  File will force file output, and is equivalent to the -file flag
-  NoEmbed will remove the regular embed. File must also be enabled (unless output is oversized).
+  Other configurable values:
+    File    : Force file output, equivalent to the -file flag
+    Embed   : Other fields to add to the embed -- everything is configurable apart from description
+    NoEmbed : Completely remove the regular embed
+    Width   : Default width of field names, slice indices will still have a width of 3
+    NoErr   : If errors occur, exit silently (don't send an error message to the target channel)
 */}}
 
 {{$data := sdict
   "Name" "Custom Target"
+  "File" true
   "Target" (sdict
     "KeyName" (cslice "example" "slice")
     "OtherKey" 12345
     "Another" "This one is a string!"
   )
-  "File" true
-  "NoEmbed" true
+  "Embed" (sdict
+    "description" "This will be overwritten"
+    "author" (sdict "name" .User.Username "icon_url" (.User.AvatarURL "128"))
+    "footer" (sdict "text" "These embed fields are all configurable!")
+  )
 }}
 
 {{execCC CCID nil 0 $data}}
