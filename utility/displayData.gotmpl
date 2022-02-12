@@ -32,7 +32,17 @@
       {{- $query.Set "Target" $tmpData}}
     {{- else if $query.Name}}{{$err = printf "Invalid target `%s`" $query.Name}}{{end}}
   {{- end}}
-{{- else}}{{if .ExecData}}{{$query = sdict .ExecData}}{{else}}{{$err = "Not enough arguments provided"}}{{end}}{{end}}
+{{- else}}
+  {{- with .ExecData}}
+    {{- if eq (kindOf .) "map"}}
+      {{- if .Target}}{{$query = sdict .}}
+      {{- else}}{{$query.Set "Target" .}}{{end}}
+    {{- else}}
+      {{- $query.Set "Target" .}}
+      {{- $query.Set "Name" "ExecData"}}
+    {{- end}}
+  {{- else}}{{$err = "Not enough arguments provided"}}{{end}}
+{{- end}}
 
 {{- /* If message, channel, or link flags provided, get data */}}
 {{- if $query.MessageID}}
@@ -47,7 +57,7 @@
 {{- if not (or $err $query.Target)}}{{$err = "Invalid target data"}}{{end}}
 
 {{- /* Ignore errors if query is "help"/"h" */}}
-{{- if eq $query.Name "Help" "H"}}{{sendMessage nil (cembed
+{{- if eq (str $query.Name) "Help" "H"}}{{sendMessage nil (cembed
   "title" "Viewdata/Data/Structure/Struct"
   "description" (print $syntax "\nDisplays specified CC data in a human-readable format\nRecursively deconstructs supported objects, including those contained in slices")
 )}}
@@ -61,7 +71,7 @@
     Guild    : Used to circumvent bug in structToSdict, see https://github.com/botlabs-gg/yagpdb/pull/1122 -- Todo: remove this when aforementioned PR is implemented
   */}}
   {{- $data := sdict
-    "Name" $query.Name
+    "Name" (str $query.Name)
     "Target" $query.Target
     "FmtdText" ""
     "Indent" 0
@@ -71,7 +81,7 @@
   {{- /* Execute in line with target data */}}
   {{- block "deconstruct" $data}}
     {{- /* Make current data iterable (sdict or cslice) */}}
-    {{- $obj := sdict .Name .Target}}{{$t := kindOf .Target}}{{$width := 12}}
+    {{- $obj := sdict .Name .Target}}{{$t := kindOf .Target}}{{$width := 10}}
     {{- if eq $t "ptr" "struct"}}{{$t = printf "%T" .Target}}
       {{- /* Circumvent bug with structToSdict -- Todo: remove this branching when fix in yagpdb pull 1122 is released */}}
       {{- if eq $t "dstate.ChannelState"}}{{$obj = $.Guild.GetChannel .Target.ID}}

@@ -55,6 +55,12 @@ It supports being invoked by `execCC`, with `.ExecData` being an sdict (fields s
 
 {{execCC CCID nil 0 $data}}
 ```
+```go
+{{/* ExecData can also be any type, name will be set to "ExecData" and output will assume defult parameters */}}
+{{$data := 12345}}
+
+{{execCC CCID nil 0 $data}}
+```
 
 Resource keywords are defined [here](./displayData.gotmpl#L105) in the script, and can be edited if desired.  
 
