@@ -72,7 +72,8 @@
         {{- else if eq $cmd.Action "rm"}}{{$re := cslice}}
           {{- range $cmd.Words}}{{if eq (len .) 5}}{{$re = $re.Append .}}{{$matches = print $matches "\n" .}}{{end}}{{end}}
 
-          {{- $new = reReplace (joinStr "|" $re.StringSlice|printf "\\b(?i:%s)\\b") $new ""}}
+          {{- $new = reReplace (joinStr "|" $re.StringSlice|printf "(?:,|\\A)\\b(?i:%s)\\b") $new ""}}
+          {{- if eq (index $new 0) ','}}{{$new = slice $new 1}}{{end}}
           {{- $msg.Set "embed" (sdict "title" "Word List Removal" "description" (print "The following words were removed from the word list:\n```" (or $matches "None!") "```"))}}
         {{- else if eq $cmd.Action "search" "find"}}
           {{- range $cmd.Words}}{{$matches = printf "%s\n%-5s | %t" $matches . (in $words.List .)}}{{end}}
