@@ -1,0 +1,117 @@
+{{- /*
+  Trigger Type: Regex
+  Trigger: \A(?i).*?\s*w(?:ordle)?(?:cfg|config|admin)(?:\s+|$)
+
+  Copyright: Galen CC, 2021-Present
+  Source: https://github.com/galen8183/yagpdb-cc
+  Released under license GPL version 3 (https://www.gnu.org/licenses/gpl-3.0.txt)
+*/}}
+
+{{- /* Configuration begins */}}
+  {{- $staffRoles := cslice 123 456}}{{/* List of staff role IDs */}}
+  {{- $adminRole := 100}}{{/* Administrator role ID */}}
+
+  {{- $editRoles := cslice 789 000}}{{/* List of role IDs that can edit the word list */}}
+{{- /* Configuration ends */}}
+
+{{- $err := ""}}{{$syntax := joinStr "\n" "```" "List all" "List add <Words:Text>" "List remove <Words:Text>" "List search <Words:Text>" "List grep <Regex:Text>" "User reset" "User <Stat:Wins/Losses> set <Count:Int>" "User <Stat:Wins/Losses> add <Count:Int>" "User <Stat:Wins/Losses> remove <Count:Int>" "Wipe save" "Wipe all data" "```"}}
+{{- $prefix := exec "prefix"}}{{$prefix := split (len $prefix|add -1|slice $prefix (str .Guild.ID|len|add 15)) `\E`|joinStr `\E\\E\Q`|printf "\\Q%s\\E"}}
+{{- $cmdData := reFindAllSubmatches ($regextemp := print `\A(?:` $prefix `|<@!?204255221017214977>)\s*w(?:ordle)?(?:cfg|admin)?\s+(h(?:elp)?|[lu](?:ist|ser)?|wipe (?:save|all data))(?:[-\s](wins?|loss(?:es)?))?(?:[-\s]+((?:re)?set|all|dump|search|find|grep|add|new|re?m(?:ove)?|del(?:ete)?))?(?:\s+(?:(?:<@!?)?(\d{17,19})>?|(\d+)))*\s*`) (lower .Message.Content)}}
+
+{{- if $cmdData}}
+  {{- $cmd := sdict}}{{$msg := sdict "embed" sdict}}{{$perms := sdict "Admin" (hasRoleID $adminRole)}}{{$words := sdict "Str" "" "List" cslice}}
+
+  {{- range $staffRoles}}{{if hasRoleID .}}{{$perms.Set "Staff" true}}{{end}}{{end}}
+  {{- range $editRoles}}{{if hasRoleID .}}{{$perms.Set "Edit" true}}{{end}}{{end}}
+
+  {{- with dbGet 10 "wordle_list"}}
+    {{- $words.Set "Str" .Value}}
+    {{- $words.Set "List" (split .Value ",")}}
+  {{- end}}
+
+  {{- with index $cmdData 0}}{{$cmd = sdict
+      "Target"   (index . 1)
+      "Type"     (index . 2)
+      "Action"   (index . 3)
+      "UserID"   (index . 4|toInt)
+      "Num"      (index . 5|toInt)
+      "Stripped" "No Query"
+      "Words"    cslice
+    }}
+    {{- if eq $cmd.Action "del" "delete" "rem" "rmove" "remove"}}{{$cmd.Set "Action" "rm"}}{{end}}
+    {{- if eq $cmd.Type "loss" "losses"}}{{$cmd.Set "Type" "Loss"}}{{$cmd.Set "Str" "losses"}}{{else if eq $cmd.Type "win" "wins"}}{{$cmd.Set "Type" "Win"}}{{$cmd.Set "Str" "wins"}}{{end}}
+    {{- if gt (len $.Message.Content) ($n:=index . 0|len)}}{{$cmd.Set "Stripped" (slice $.Message.Content $n)}}{{reSplit `\W+` $cmd.Stripped|$cmd.Set "Words"}}{{end}}
+  {{- end}}
+
+  {{- if or $perms.Admin $perms.Staff $perms.Edit}}
+    {{- if eq $cmd.Target "h" "help"}}{{$msg.Set "embed" (sdict
+      "title" "Wordleconfig/Wordleadmin/Wordleconfig/Wconfig/Wadmin/Wcfg"
+      "description" (print $syntax "\nConfiguration/administrative commands for the [wordle CC system](https://github.com/galen8183/yagpdb-cc)")
+    )}}
+    {{- else if eq $cmd.Target "u" "user"}}{{if or $perms.Admin $perms.Staff}}{{if $cmd.UserID}}
+      {{- $msg.embed.Set "title" "Wordle User Stats"}}{{$desc := ""}}{{$suffix := ""}}{{$user := or (dbGet $cmd.UserID "wordle").Value (sdict "Usr" "Unknown" "Stats" (sdict "Win" 0 "Loss" 0))}}
+
+      {{- if eq $cmd.Action "reset"}}{{dbDel $cmd.UserID "wordle"}}{{$desc = "reset"}}
+      {{- else if eq $cmd.Action "set"}}{{$user.Stats.Set $cmd.Type $cmd.Num}}{{$desc = print "set"}}{{$suffix = print " to `" $cmd.Num "`"}}
+      {{- else if eq $cmd.Action "add"}}{{$user.Stats.Get $cmd.Type|toInt|add $cmd.Num|$user.Stats.Set $cmd.Type}}{{$desc = print "added `" $cmd.Num "` " $cmd.Str " to"}}
+      {{- else if eq $cmd.Action "rm"}}{{sub ($user.Stats.Get $cmd.Type|toInt) $cmd.Num|$user.Stats.Set $cmd.Type}}{{$desc = print "removed `" $cmd.Num "` " $cmd.Str " from"}}
+      {{- else}}{{$err = "No matching combo found"}}{{end}}
+
+      {{- $msg.embed.Set "description" (printf "Successfully %s <@%d>'s wordle %s%s!" $desc $cmd.UserID (or $cmd.Str "stats") $suffix)}}
+      {{- if ne $cmd.Action "reset"}}{{dbSet $cmd.UserID "wordle" $user}}{{$_ := dbIncr $cmd.UserID "wordle" (fdiv $user.Stats.Win $user.Stats.Loss)}}{{end}}
+    {{- else}}{{$err = "Not enough arguments passed"}}{{end}}{{else}}{{$err = "Missing permissions"}}{{end}}
+    {{- else if eq $cmd.Target "l" "list"}}
+      {{- if eq $cmd.Action "all" "dump"}}
+        {{- $msg.Set "file" (joinStr "\n" (sort $words.List).StringSlice)}}
+        {{- $msg.Set "embed" (sdict "title" "Word List Dump" "description" (print "The attached file contains a full list of registered words!\nTotal word count: `" (len $words.List) "`"))}}
+      {{- else if $cmd.Stripped}}{{$new := $words.Str}}{{$matches := ""}}
+        {{- if eq $cmd.Action "add"}}
+          {{- range $cmd.Words}}{{if eq (len .) 5}}{{$new = print $new "," .}}{{$matches = print $matches "\n" .}}{{end}}{{end}}
+
+          {{- $msg.Set "embed" (sdict "title" "Word List Addition" "description" (print "The following words were added to the word list:\n```" (or $matches "None!") "```"))}}
+        {{- else if eq $cmd.Action "rm"}}{{$re := cslice}}
+          {{- range $cmd.Words}}{{if eq (len .) 5}}{{$re = $re.Append .}}{{$matches = print $matches "\n" .}}{{end}}{{end}}
+
+          {{- $new = reReplace (joinStr "|" $re.StringSlice|printf "\\b(?i:%s)\\b") $new ""}}
+          {{- $msg.Set "embed" (sdict "title" "Word List Removal" "description" (print "The following words were removed from the word list:\n```" (or $matches "None!") "```"))}}
+        {{- else if eq $cmd.Action "search" "find"}}
+          {{- range $cmd.Words}}{{$matches = printf "%s\n%-5s | %t" $matches . (in $words.List .)}}{{end}}
+          {{- $msg.Set "embed" (sdict "title" "Word List Search" "description" (printf "Here are your search results:\n```\n%-5s | %s\n%s%[3]s-%s```" "Word" "Found" "------" $matches))}}
+        {{- else if eq $cmd.Action "grep"}}{{$wordStr := joinStr "\n" $words.List}}
+          {{deleteMessage nil (sendMessageRetID nil "**Warning:** This command is highly prone to regex compilation errors, if you aren't comfortable with regex see <https://www.regular-expressions.info/> and <https://regex101.com/>!") 10}}
+
+          {{- range reFindAll $cmd.Stripped $wordStr}}{{$matches = printf "%s\n%-5s | N\\A" $matches .}}{{end}}
+          {{- $matches = print $matches "\n"}}
+          {{- range reFindAllSubmatches $cmd.Stripped $wordStr}}
+            {{- $sub := "None"}}{{if gt (len .) 1}}{{$sub = slice . 1|joinStr ", "}}{{end}}
+            {{- $matches = printf "%s\n%-5s | %s" $matches (index . 0) $sub}}
+          {{- end}}
+
+          {{- $matches = printf "%-5s | %s\n%s%[3]s--%s" "Match" "Groups" "------" $matches}}
+          {{- if gt (len $matches) 4000}}{{$msg.Set "file" $matches}}{{$matches = "Search results are too long, refer to the attached file"}}{{else}}{{$matches = print "Found the following matches:\n```\n" $matches "```"}}{{end}}
+          {{- $msg.Set "embed" (sdict "title" "Word List Search" "description" $matches)}}
+        {{- else}}{{$err = "No matching combo found"}}{{end}}
+
+        {{- if $new}}{{dbSet 10 "wordle_list" $new}}{{end}}
+      {{- else}}{{$err = "Not enough arguments passed"}}{{end}}
+    {{- else if eq $cmd.Target "wipe save" "wipe all data"}}
+      {{- if $perms.Admin}}
+        {{- with dbGet 10 "wordle_wipe_confirm"}}
+          {{- if .Value.Get $cmd.Target}}
+            {{- $count := dbDelMultiple (sdict "pattern" "%wordle%") 100 0}}
+
+            {{- $msg.Set "content" (print "Successfully deleted `" $count "` database entries!\nNote: if 100 entries were deleted, you may need to run this command again until the number is below 100.")}}
+            {{- if eq $cmd.Target "wipe save"}}{{dbSet 10 "wordle_list" $words.Str}}{{end}}
+          {{- else}}{{$err = "Something went wrong, try again later!"}}{{end}}
+        {{- else}}
+          {{- dbSetExpire 10 "wordle_wipe_confirm" (sdict $cmd.Target true) 120}}
+          {{- $msg.Set "content" (print .User.Mention ", are you sure you want to do this? If yes, run this command again within the next 2 minutes.")}}
+        {{- end}}
+      {{- else}}{{$err = "Missing permissions"}}{{end}}
+    {{- else}}{{$err = "No matching combo found"}}{{end}}
+  {{- else}}{{$err = "Missing permissions"}}{{end}}
+
+
+  {{- if $err}}{{print $syntax "\nInvalid arguments provided: " $err}}
+  {{- else}}{{sendMessage nil (complexMessage $msg)}}{{end}}
+{{- else}}{{print $syntax "\nInvalid arguments provided: Not enough arguments passed"}}{{end}}

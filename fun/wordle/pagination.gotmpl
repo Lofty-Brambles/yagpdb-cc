@@ -1,0 +1,35 @@
+{{/*
+  Trigger Type: Reaction
+  Trigger: Added reactions only/added and removed reactions
+
+  Copyright: Galen CC, 2021-Present
+  Source: https://github.com/galen8183/yagpdb-cc
+  Released under license GPL version 3 (https://www.gnu.org/licenses/gpl-3.0.txt)
+*/}}
+
+{{/* Configuration begins */}}
+  {{$forward := "➡️"}}
+  {{$back := "⬅️"}}
+{{/* Configuration ends */}}
+
+{{if and .ReactionAdded .Message.Embeds (eq .Message.Author.ID 204255221017214977) (eq .Reaction.Emoji.APIName $forward $back)}}
+  {{$err := ""}}{{$newPage := 1}}
+
+  {{with index .Message.Embeds 0|structToSdict}}
+    {{if and (eq .Title "Wordle Leaderboard") ($page := slice .Footer.Text 5|toInt)}}
+      {{with or (dbGet 10 "wordle_stats").Value sdict}}{{.Set "Paginated" (sdict "Forward" $forward "Back" $back)}}{{dbSet 10 "wordle_stats" .}}{{end}}
+      {{if eq $.Reaction.Emoji.APIName $forward}}{{$newPage = add $page 1}}{{else}}{{$newPage = sub $page 1}}{{end}}
+      {{if and (gt $newPage 0) (le $newPage 1000)}}
+        {{$desc := printf "```\n%-4s | %-12s | %-5s | %-12s\n%s%[5]s%[5]s%[5]s----" "Rank" "Name" "Games" "Win/Loss Ratio" "----------"}}{{$played := true}}
+        {{range $i, $d := dbTopEntries "wordle" 10 (sub $newPage 1|mult 10)}}{{with $d.Value.Stats}}
+          {{- $desc = printf "%s\n%-4d | %-12s | %-5d | %3d/%-3d %5.2f" $desc (add $i 1) $d.Value.Usr (add .Win .Loss) (toInt .Win) (toInt .Loss) (fdiv .Win .Loss) -}}
+        {{end}}{{else}}{{$played = false}}{{end}}
+
+        {{if $played}}{{$desc = print $desc "```"}}
+        {{else}}{{$desc = print "No users on page " $newPage "!"}}{{end}}
+
+        {{cembed "title" "Wordle Leaderboard" "footer" (print "Page " $newPage|sdict "text") "description" $desc|editMessage nil $.Message.ID}}
+      {{end}}
+    {{end}}
+  {{end}}
+{{end}}
