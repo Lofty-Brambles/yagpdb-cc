@@ -27,6 +27,12 @@ General information on YAGPDB.xyz custom commands is available in the [documenta
 
 </details>
 
+<details><summary>Fun</summary>
+
+- [Wordle](fun/wordle)  
+
+</details>
+
 <details><summary>Tickets (under development)</summary>
 
 - [Configuration](tickets/ticketConfig.gotmpl)  
