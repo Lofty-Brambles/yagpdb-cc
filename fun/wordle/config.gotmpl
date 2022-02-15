@@ -101,12 +101,12 @@
           {{- if .Value.Get $cmd.Target}}
             {{- $count := dbDelMultiple (sdict "pattern" "%wordle%") 100 0}}
 
-            {{- $msg.Set "content" (print "Successfully deleted `" $count "` database entries!\nNote: if 100 entries were deleted, you may need to run this command again until the number is below 100.")}}
+            {{- $msg.embed.Set "description" (print "Successfully deleted `" $count "` database entries!\nNote: if 100 entries were deleted, you may need to run this command again until the number is below 100.")}}
             {{- if eq $cmd.Target "wipe save"}}{{dbSet 10 "wordle_list" $words.Str}}{{end}}
           {{- else}}{{$err = "Something went wrong, try again later!"}}{{end}}
         {{- else}}
           {{- dbSetExpire 10 "wordle_wipe_confirm" (sdict $cmd.Target true) 120}}
-          {{- $msg.Set "content" (print .User.Mention ", are you sure you want to do this? If yes, run this command again within the next 2 minutes.")}}
+          {{- $msg.Set "content" .User.Mention}}{{$msg.embed.Set "description" "Are you sure you want to do this? If yes, run this command again within the next 2 minutes."}}
         {{- end}}
       {{- else}}{{$err = "Missing permissions"}}{{end}}
     {{- else}}{{$err = "No matching combo found"}}{{end}}
