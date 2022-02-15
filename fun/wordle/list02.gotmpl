@@ -3,7 +3,7 @@
 {{with dbGet 10 "wordle_list"}}
   {{$words = print .Value "," $words}}
   {{dbSet 10 "wordle_list" $words}}
-  List 2/3 added. Add the next list here: <link to list 3>
+  List 2/3 added. Add the next list here: <https://github.com/galen8183/yagpdb-cc/blob/main/fun/wordle/list02.gotmpl>
 
   {{/* Init stats db entry, doubles as check that lists were added in order */}}
   {{dbSet 10 "wordle_stats" (sdict
@@ -13,5 +13,5 @@
   )}}
 {{else}}
 You must add the first list before this one!
-See <link to README> for more details.
+See <https://github.com/galen8183/yagpdb-cc/blob/main/fun/README.md> for more details.
 {{end}}
