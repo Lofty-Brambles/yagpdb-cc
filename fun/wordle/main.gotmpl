@@ -14,9 +14,9 @@
 {{- $syntax := joinStr "\n" "```" "Wordle help" "Wordle start" "Wordle stop" "Wordle leaderboard [Page:Int]" "Wordle stats" "Wordle info [User:ID/Mention]" "```"}}
 {{- $cmdData := reFindAllSubmatches (print `\A(?i)(?:` $safePrefix `|<@!?204255221017214977>)\s*word(?:le?)?(?:\s+(h(?:elp)?|start|p(?:lay)?|stop|end|l(?:eader)?b(?:oard)?|stats|i(?:nfo)?)(?:\s+(?:<@!?)?(-?\d+)>?)?)`) (lower .Message.Content)}}
 
-{{- $err := ""}}{{$msg := lower .Message.Content}}{{$data := sdict "Init" true}}{{$rank := 0}}{{$words := cslice}}{{$isStaff := false}}
+{{- $err := ""}}{{$msg := lower .Message.Content}}{{$data := sdict "Init" true}}{{$words := cslice}}{{$isStaff := false}}
 
-{{- with dbGet .User.ID "wordle"}}{{$data = .Value}}{{$rank = dbIncr $.User.ID "wordle" 0}}{{end}}
+{{- with dbGet .User.ID "wordle"}}{{$data = .Value}}{{end}}
 {{- if or $cmdData $data.Game}}{{$words = split (dbGet 10 "wordle_list").Value ","}}{{end}}
 {{- $em := sdict
   "Gn" (cslice 940836809624145930 940836809435406347 940836809808678953 940836809808678952 940836809900978186 940836810504937512 940836810542678077 940836809989046342 940836810249105418 940836810047754250 940836809808703559 940836809808678958 940836810148429914 940836810177777744 940836810215530497 940836810391703592 940836810244890724 940836810014208011 940836810391695380 940836810328768563 940836810328780850 940836810400104478 940836810400096256 940836810391703593 940836810215530498 940836810500763658)
@@ -122,11 +122,11 @@
     {{- if $won}}
       {{- add $data.Stats.Win 1|$data.Stats.Set "Win"}}
       {{- add $stats.Win 1|$stats.Set "Win"}}
-      {{- range $i, $n := $stats.Freq}}{{if eq $i $data.Game.Stage}}{{$stats.Freq.Set $i (add $n 1)}}{{end}}{{end}}
+      {{- $stats.Freq.Set (sub $data.Game.Stage 1) (sub $data.Game.Stage 1|index $stats.Freq|add 1)}}
     {{- else}}
       {{- add $data.Stats.Loss 1|$data.Stats.Set "Loss"}}
       {{- add $stats.Loss 1|$stats.Set "Loss"}}
-      {{- print $data.Usr " didn't guess the word \"" .Word "\" within 6 tries :("|sdict "text"|$emb.Set "footer"}}
+      {{- print $data.Usr ` didn't guess the word "` .Word `" within 6 tries :(`|sdict "text"|$emb.Set "footer"}}
     {{- end}}
 
     {{- $data.Del "Game"}}
