@@ -35,7 +35,7 @@
   {{- end}}
 {{- else}}
   {{- with .ExecData}}
-    {{- if eq (kindOf .) "map" "ptr"}}
+    {{- if eq (printf "%T" .) "templates.SDict" "*templates.SDict"}}
       {{- if .Target}}{{$query = sdict .}}
       {{- else}}{{$query.Set "Target" .}}{{end}}
     {{- else}}
@@ -62,7 +62,7 @@
 {{- /* Ignore errors for help */}}
 {{- if eq $query.Name "Help" "H"}}{{sendMessage nil (cembed
   "title" "Viewdata/Data/Structure/Struct"
-  "description" (print $syntax "\nDisplays a various data in a human-readable format\nRecursively deconstructs most composite datatypes")
+  "description" (print $syntax "\nDisplays a various data in a human-readable format\nRecursively deconstructs composite datatypes")
 )}}
 {{- else if $err}}{{/* Mimic default error message (syntax + error) */}}
   {{- if not $query.NoErr}}{{print $syntax "\nInvalid arguments passed: " $err}}{{end}}
@@ -72,7 +72,7 @@
     Target   : Actual data to format
     FmtdText : Current formatted text to concatenate onto
     Indent   : Width of indent (added with printf, width of 2 spaces/level)
-    Guild    : Used to circumvent bug in structToSdict, see https://github.com/botlabs-gg/yagpdb/pull/1122
+    Guild    : See https://github.com/botlabs-gg/yagpdb/pull/1122
   */}}
   {{- $data := sdict
     "Name"     $query.Name
@@ -87,21 +87,21 @@
   {{- block "deconstruct" $data}}
     {{- /* Make object iterable */}}
     {{- $obj := sdict}}{{$t := sdict "S" (kindOf .Target) "L" (printf "%T" .Target)}}
-    {{- if or (eq $t.S "map") (eq $t.L "templates.SDict" "*templates.SDict" "templates.Dict" "*templates.Dict")}}{{$obj = .Target}}
+    {{- if or (eq $t.S "map") (eq $t.L "templates.SDict" "*templates.SDict" "templates.Dict" "*templates.Dict")}}{{$obj = .Target}}{{.Set "Width" 10}}
+    {{- else if or (eq $t.S "slice") (eq $t.L "templates.Slice" "*templates.Slice")}}{{$obj = .Target}}{{.Set "Width" 3}}
     {{- else if eq $t.S "ptr" "struct"}}
-      {{- /* Circumvent structToSdict bug -- Todo: remove when pull 1122 is released */}}
+      {{- /* Circumvent structToSdict bug (see L75) */}}
       {{- if eq $t.L "dstate.ChannelState"}}{{$obj = $.Guild.GetChannel .Target.ID}}
       {{- else if eq $t.L "discordgo.Role"}}{{$obj = $.Guild.GetRole .Target.ID}}
       {{- else if eq $t.L "discordgo.Emoji"}}{{$obj = $.Guild.GetEmoji .Target.ID}}
       {{- else if eq $t.L "discordgo.VoiceState"}}{{$obj = $.Guild.GetVoiceState .Target.UserID}}
-      {{- else}}{{$obj = .Target}}{{end}}{{$obj = structToSdict $obj}}
-    {{- else if eq $t.S "slice"}}{{$obj = .Target}}{{.Set "Width" 3}}
+      {{- else}}{{$obj = .Target}}{{end}}{{$obj = structToSdict $obj}}{{.Set "Width" 10}}
     {{- else}}{{$obj = sdict .Name .Target}}{{end}}
 
     {{- /* Format data, recurse if possible */}}
     {{- range $n, $val := $obj}}
-      {{- if and (eq ($type:=kindOf $val) "map" "ptr" "struct" "slice") $val}}
-        {{- $ext := $type}}{{if eq $ext "ptr"}}{{$ext = "struct"}}{{end}}
+      {{- if and (eq ($type:=kindOf $val) "map" "ptr" "struct" "slice") $val}}{{$ext := printf "%T" $val}}
+        {{- if in $ext "templates.Slice"}}{{$ext = "slice"}}{{else if in $ext "Dict"}}{{$ext = "dict"}}{{else if eq $type "ptr"}}{{$ext = "struct"}}{{else}}{{$ext = $type}}{{end}}
         {{- $new := sdict
           "Name"     $.Name
           "Target"   $val
@@ -120,13 +120,12 @@
 
   {{- /* Partial paths to resource links */}}
   {{- $rsrcs := sdict
-    "Channel"               (sdict "Discord" "channel#channel-object"    "Yag" "channel")
-    "ChannelOrThreadParent" (sdict "Discord" "channel#channel-object"    "Yag" "channel")
-    "Guild"                 (sdict "Discord" "guild#guild-object"        "Yag" "guild-server")
-    "Member"                (sdict "Discord" "guild#guild-member-object" "Yag" "member")
-    "Message"               (sdict "Discord" "channel#message-object"    "Yag" "message")
-    "Server"                (sdict "Discord" "guild#guild-object"        "Yag" "guild-server")
-    "User"                  (sdict "Discord" "user#user-object"          "Yag" "user")
+    "Channel" (sdict "Discord" "channel#channel-object"    "Yag" "channel")
+    "Guild"   (sdict "Discord" "guild#guild-object"        "Yag" "guild-server")
+    "Member"  (sdict "Discord" "guild#guild-member-object" "Yag" "member")
+    "Message" (sdict "Discord" "channel#message-object"    "Yag" "message")
+    "Server"  (sdict "Discord" "guild#guild-object"        "Yag" "guild-server")
+    "User"    (sdict "Discord" "user#user-object"          "Yag" "user")
   }}
 
   {{- $desc := ""}}
