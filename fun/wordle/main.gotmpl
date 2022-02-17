@@ -3,78 +3,77 @@
   Trigger: \A
 
   No configuration is necessary in this CC, you only need the word list (see <https://github.com/galen8183/yagpdb-cc/blob/main/fun/README.md>)
-  Once the word list is added, just start playing with '(prefix)wordle play' !
+  Once the word list is added, start playing with '(prefix)wordle play' !
 
   Copyright: Galen CC, 2022-Present
   Source: https://github.com/galen8183/yagpdb-cc
   Released under license GPL version 3 (https://www.gnu.org/licenses/gpl-3.0.txt)
 */}}
 
-{{- $prefix := exec "prefix"}}{{$prefix = len $prefix|add -1|slice $prefix (str .Guild.ID|len|add 15)}}{{$safePrefix := split $prefix `\E`|joinStr `\E\\E\Q`|printf "\\Q%s\\E"}}
-{{- $syntax := joinStr "\n" "```" "Wordle help" "Wordle start" "Wordle stop" "Wordle leaderboard [Page:Int]" "Wordle stats" "Wordle info [User:ID/Mention]" "```"}}
-{{- $cmdData := reFindAllSubmatches (print `\A(?i)(?:` $safePrefix `|<@!?204255221017214977>)\s*word(?:le?)?(?:\s+(h(?:elp)?|start|p(?:lay)?|stop|end|l(?:eader)?b(?:oard)?|stats|i(?:nfo)?)(?:\s+(?:<@!?)?(-?\d+)>?)?)`) (lower .Message.Content)}}
+{{$prefix := exec "prefix"}}{{$prefix = len $prefix|add -1|slice $prefix (str .Guild.ID|len|add 15)}}{{$safePrefix := split $prefix `\E`|joinStr `\E\\E\Q`|printf "\\Q%s\\E"}}
+{{$syntax := joinStr "\n" "```" "Wordle help" "Wordle start" "Wordle stop" "Wordle leaderboard [Page:Int]" "Wordle stats" "Wordle info [User:ID/Mention]" "```"}}
+{{$err := ""}}{{$emb := sdict}}{{$input := lower .Message.Content}}{{$data := sdict "Init" true}}{{$rank := 0}}{{$words := cslice}}{{$newData := sdict}}
+{{$cmdData := reFindAllSubmatches (print `\A(?i)(?:` $safePrefix `|<@!?204255221017214977>)\s*wordle(?:\s+(h(?:elp)?|start|p(?:lay)?|stop|end|l(?:eader)?b(?:oard)?|stats|i(?:nfo)?)(?:\s+(?:<@!?)?(-?\d+)>?)?)`) $input}}
 
-{{- $err := ""}}{{$msg := lower .Message.Content}}{{$data := sdict "Init" true}}{{$words := cslice}}{{$isStaff := false}}
-
-{{- with dbGet .User.ID "wordle"}}{{$data = .Value}}{{end}}
-{{- if or $cmdData $data.Game}}{{$words = split (dbGet 10 "wordle_list").Value ","}}{{end}}
-{{- $em := sdict
+{{with dbGet .User.ID "wordle"}}{{$data = .Value}}{{end}}
+{{if or $cmdData $data.Game}}{{$words = split (dbGet 10 "wordle_list").Value ","}}{{end}}
+{{$em := sdict
   "Gn" (cslice 940836809624145930 940836809435406347 940836809808678953 940836809808678952 940836809900978186 940836810504937512 940836810542678077 940836809989046342 940836810249105418 940836810047754250 940836809808703559 940836809808678958 940836810148429914 940836810177777744 940836810215530497 940836810391703592 940836810244890724 940836810014208011 940836810391695380 940836810328768563 940836810328780850 940836810400104478 940836810400096256 940836810391703593 940836810215530498 940836810500763658)
   "Yl" (cslice 940836987785609246 940836987802374214 940836987483594854 940836988322455593 940836987882053702 940836987923988521 940836987689132053 940836987965952000 940836988058230815 940836988074995742 940836988058230816 940836988087586846 940836988112748576 940837104219480114 940837104236249188 940837104290779247 940837104429187112 940837104387240007 940837104391426109 940837104370479145 940837104383062016 940837104177528873 940837104466939914 940837104391426110 940837104617922590 940837104534056970)
   "Gr" (cslice 940837138004598874 940837137966858281 940837138042355752 940837137861992480 940837138189131786 940837138147213383 940837138281398302 940837138327568384 940837138373681193 940837138134626335 940837138403057724 940837138688249866 940837138323357727 940837138625351721 940837138654699560 940837138696650863 940837138403057728 940837138763776060 940837138742788126 940837138860212274 940837138839240745 940837138868617317 940837138872819742 940837138885410846 940837140282101867 940837138965082162)
 }}
 
-{{- if $cmdData}}{{$cmd := index $cmdData 0 1}}
-  {{- if eq $cmd "help"}}{{$syntax}}
-  {{- else if eq $cmd "start" "play" "p"}}
-    {{- if not $data.Game}}{{with $data}}{{.Set "Game" sdict}}
-      {{- $id := sendMessageRetID nil (cembed "title" "Wordle!" "description" (print "<@" $.User.ID ">, your game has started, make your first guess now!\n_ _"))}}
+{{if $cmdData}}{{$cmd := index $cmdData 0 1}}
+  {{if eq $cmd "help"}}{{$emb = print $syntax "\nThe game of [wordle](https://www.nytimes.com/games/wordle/index.html)!"|sdict "title" "Wordle" "description"}}
+  {{else if eq $cmd "start" "play" "p"}}
+    {{if not $data.Game}}{{with $data}}{{.Set "Game" sdict}}
+      {{$id := sendMessageRetID nil (cembed "title" "Wordle!" "description" (print "<@" $.User.ID ">, your game has started, make your first guess now!\n_ _"))}}
 
-      {{- .Game.Set "ChannelID" $.Channel.ID}}{{.Game.Set "MessageID" $id}}
-      {{- .Set "Usr" (or $.Member.Nick $.User.Username)}}{{.Set "Stats" (or .Stats sdict)}}
-      {{- len $words|randInt|index $words|.Game.Set "Word"}}{{.Game.Set "Stage" 0}}
-      {{- dbSet $.User.ID "wordle" .}}
-      {{- $_ := dbIncr $.User.ID "wordle" (fdiv .Win .Loss)}}
-    {{- end}}{{else}}{{$err = "You're already in a game!"}}{{end}}
-  {{- else if eq $cmd "stop" "end"}}
-    {{- with and $data.Game $data}}
-      {{- $emb := index (getMessage nil .Game.MessageID).Embeds 0|structToSdict}}{{sdict "text" "Game ended early!"|$emb.Set "footer"}}
-      {{- editMessage nil .Game.MessageID (cembed $emb)}}
-      {{- $cmd}}{{or (and (eq $cmd "stop") "p") ""}}ed your game! The word was `{{.Game.Word}}`.
-      {{- .Del "Game"}}{{dbSet $.User.ID "wordle" .}}{{$_ := dbIncr $.User.ID "wordle" (fdiv .Win .Loss)}}
-    {{- else}}{{$err = "You aren't in a game!"}}{{end}}
-  {{- else if eq $cmd "info"}}
-    {{- $uID := $.User.ID}}{{if $tmpUID := index $cmdData 0 2}}{{$uID = toInt $tmpUID}}{{end}}
-    {{- with (dbGet $uID "wordle").Value}}
-      {{- $rank := dbRank (sdict "pattern" "wordle") $uID "wordle"}}{{$count := dbCount "wordle"}}
+      {{.Game.Set "ChannelID" $.Channel.ID}}{{.Game.Set "MessageID" $id}}
+      {{.Set "Usr" (or $.Member.Nick $.User.Username)}}{{.Set "Stats" (or .Stats sdict)}}
+      {{len $words|randInt|index $words|.Game.Set "Word"}}{{.Game.Set "Stage" 0}}
+      {{$newData = .}}
+    {{end}}{{else}}{{$err = "You're already in a game"}}{{end}}
+  {{else if eq $cmd "stop" "end"}}
+    {{with and $data.Game $data}}
+      {{$emb := index (getMessage nil .Game.MessageID).Embeds 0|structToSdict}}{{sdict "text" "Game ended early!"|$emb.Set "footer"}}
+      {{editMessage nil .Game.MessageID (cembed $emb)}}
+      {{print "Stopped your game! The word was " .Game.Word "`."|$emb.Set "description"}}
+      {{.Del "Game"}}{{$newData = .}}
+    {{else}}{{$err = print "You aren't in a game! Start one with `" $prefix "wordle play`"}}{{end}}
+  {{else if eq $cmd "info"}}
+    {{$uID := $.User.ID}}{{with index $cmdData 0 2}}{{$uID = toInt .}}{{end}}
+    {{if $d := (dbGet $uID "wordle").Value}}{{with $d.Stats}}
+      {{$rank := dbRank (sdict "pattern" "wordle") $uID "wordle"}}{{$count := dbCount "wordle"}}{{$freq := ""}}
+      {{if .Freq}}{{range $i, $f := .Freq}}{{$freq = printf "%s%5d : %d\n" $freq (add $i 1) $f}}{{end}}
+      {{$freq = print "```\nGuess | Wins\n------------\n" $freq "```"}}{{end}}
 
-      {{- sendMessage nil (cembed "title" "User Wordle Info" "description" (print "Wordle information for <@" $uID ">") "fields" (cslice
-        (sdict "name" "Total Games" "value" (add .Stats.Win .Stats.Loss|str) "inline" true)
-        (sdict "name" "Wins/Losses" "value" (printf "%d/%d : %.2f" (toInt .Stats.Win) (toInt .Stats.Loss) (fdiv .Stats.Win .Stats.Loss)) "inline" true)
+      {{$emb = sdict "description" (print (print "<@" $uID ">"|or $d.Usr) "'s wordle stats!") "fields" (cslice
+        (sdict "name" "Total Games" "value" (add .Win .Loss|str) "inline" true)
+        (sdict "name" "Wins/Losses" "value" (printf "%d/%d : %.2f" (toInt .Win) (toInt .Loss) (fdiv .Win .Loss)) "inline" true)
         (sdict "name" "Server Rank" "value" (print $rank "/" $count) "inline" true)
-      ))}}
-    {{- else}}{{printf "<@%d> hasn't played wordle yet!" $uID|cembed "title" "User Wordle Stats" "description"|sendMessage nil}}{{end}}
-  {{- else if eq $cmd "lb" "leaderboard"}}
-    {{- $page := 1}}{{if index $cmdData 0 2}}{{$page = index $cmdData 0 2|toInt}}{{end}}
-    {{- if or (le $page 0) (gt $page 1000)}}{{$err = "Page number must be between 1 and 1000!"}}
-    {{- else}}
-      {{- $desc := printf "```\n%-4s | %-12s | %-5s | %-12s\n%s%[5]s%[5]s%[5]s----" "Rank" "Name" "Games" "Win/Loss Ratio" "----------"}}{{$played := true}}
+        (sdict "name" "Freqency"    "value" (or $freq "No frequency logged"))
+      )}}
+    {{end}}{{else}}{{$emb = print "<@" $uID "> hasn't played wordle yet!"|sdict "title" "User Wordle Stats" "description"}}{{end}}
+  {{else if eq $cmd "lb" "leaderboard"}}
+    {{$page := 1}}{{with index $cmdData 0 2}}{{$page = toInt .}}{{end}}
+    {{if or (le $page 0) (gt $page 1000)}}{{$err = "Page number must be between 1 and 1000"}}
+    {{else}}
+      {{$desc := printf "```\n%-4s | %-12s | %-5s | %-12s\n%s%[5]s%[5]s%[5]s----" "Rank" "Name" "Games" "Win/Loss Ratio" "----------"}}{{$played := true}}
       {{- range $i, $d := dbTopEntries "wordle" 10 (sub $page 1|mult 10)}}{{with $d.Value.Stats}}
         {{- $desc = printf "%s\n%-4d | %-12s | %-5d | %3d/%-3d %5.2f" $desc (add $i 1) $d.Value.Usr (add .Win .Loss) (toInt .Win) (toInt .Loss) (fdiv .Win .Loss)}}
-      {{- end}}{{else}}{{$played = false}}{{end}}
+      {{- end}}{{else}}{{$played = false}}{{end}}{{$desc = print $desc "```"}}
 
-      {{- if $played}}{{$desc = print $desc "```"}}
-      {{- else if ne $page 1}}{{$desc = print "No users on page " $page "!"}}
-      {{- else}}{{$desc = print "No games have been played yet!\nStart one with `" $prefix "wordle play`"}}{{end}}
+      {{if not $played}}{{if ne $page 1}}{{$desc = print "No users on page " $page "!"}}{{else}}{{$desc = print "No games have been played yet!\nStart one with `" $prefix "wordle play`"}}{{end}}{{end}}
 
-      {{- $mID := cembed "title" "Wordle Leaderboard" "footer" (print "Page " $page|sdict "text") "description" $desc|sendMessageRetID nil}}
-      {{- with (dbGet 10 "wordle_stats").Value}}{{if .Paginated}}{{addMessageReactions nil $mID .Paginated.Back .Paginated.Forward}}{{end}}{{end}}
-    {{- end}}
-  {{- else if eq $cmd "stats"}}
-    {{- with (dbGet 10 "wordle_stats").Value}}
-      {{- $freq := "```\nGuess | Wins\n------------\n"}}{{range $i, $f := .Freq}}{{$freq = printf "%s%5d : %d\n" $freq (add $i 1) $f}}{{end}}
+      {{$mID := cembed "title" "Wordle Leaderboard" "footer" (print "Page " $page|sdict "text") "description" $desc|sendMessageRetID nil}}
+      {{with (dbGet 10 "wordle_stats").Value}}{{if .Paginated}}{{addMessageReactions nil $mID .Paginated.Back .Paginated.Forward}}{{end}}{{end}}
+    {{end}}
+  {{else if eq $cmd "stats"}}
+    {{with (dbGet 10 "wordle_stats").Value}}
+      {{$freq := "```\nGuess | Wins\n------------\n"}}{{range $i, $f := .Freq}}{{$freq = printf "%s%5d : %d\n" $freq (add $i 1) $f}}{{end}}
 
-      {{- sendMessage nil (cembed
+      {{$emb = sdict
         "title" "Server Wordle Stats"
         "fields" (cslice
           (sdict "name" "Total Games" "value" (add .Win .Loss|str) "inline" true)
@@ -82,61 +81,48 @@
           (sdict "name" "Word Count"  "value" (len $words|str) "inline" true)
           (sdict "name" "Freqency"    "value" (print $freq "```"))
         )
-      )}}
-    {{- else}}{{print "No games have been played yet!\nStart one with `" $prefix "wordle play`"|cembed "title" "Server Wordle Stats" "description"|sendMessage nil}}{{end}}
-  {{- end}}
+      }}
+    {{else}}{{$err = "No games have been played yet! Start one with `" $prefix "wordle play`"}}{{end}}
+  {{end}}
 
-  {{- if $err}}{{print $syntax "\nInvalid arguments provided: " $err}}{{end}}
-{{- else}}{{with $data.Game}}
-  {{- $chars := toRune $msg}}{{$won := false}}{{$emb := sdict}}
-  {{- $line := cslice "" "" "" "" ""}}{{$word := toRune .Word|cslice.AppendSlice}}
+  {{if $err}}{{$.User.Mention}}, {{$err}}!
+  {{else}}
+    {{if $emb}}{{sendMessage nil (cembed $emb)}}{{end}}
+    {{with $newData}}{{dbSet $.User.ID "wordle" .}}{{$_ := dbIncr $.User.ID "wordle" (fdiv .Stats.Win .Stats.Loss)}}{{end}}
+  {{end}}
+{{else if $data.Game}}{{with $data}}
+  {{$chars := toRune $input}}{{$won := false}}{{$emb := sdict}}{{$line := cslice "" "" "" "" ""}}{{$word := toRune .Game.Word|cslice.AppendSlice}}{{$msg := .Game.MessageID}}
 
-  {{- if eq .ChannelID $.Channel.ID}}
-    {{- if eq (len $msg) 5}}
-      {{- if in $words $msg}}
-        {{- $emb = index (getMessage nil .MessageID).Embeds 0|structToSdict}}
-        {{- slice (split $emb.Description "\n") 1|joinStr "\n"|printf "<@%d>'s game, on stage %d\n%s" $.User.ID (add .Stage 1)|$emb.Set "Description"}}
+  {{if and (eq .Game.ChannelID $.Channel.ID) (eq (len $input) 5)}}
+    {{if in $words $input}}
+      {{$emb = index (getMessage nil .Game.MessageID).Embeds 0|structToSdict}}
+      {{slice (split $emb.Description "\n") 1|joinStr "\n"|printf "<@%d>'s game, on stage %d\n%s" $.User.ID (add .Game.Stage 1)|$emb.Set "Description"}}
 
-        {{- range $i, $c := $chars}}{{if eq $c (index $word $i)}}
-          {{- sub $c 97|index $em.Gn|printf "<:%c_:%d>" $c|$line.Set $i}}
-          {{- $word.Set $i 0}}
-        {{- end}}{{end}}
+      {{- range $i, $c := $chars}}{{if eq $c (index $word $i)}}{{sub $c 97|index $em.Gn|printf "<:%c_:%d>" $c|$line.Set $i}}{{$word.Set $i 0}}{{end}}{{end}}
+      {{- range $i, $c := $chars}}{{if not (index $line $i)}}{{$col := $em.Gr}}{{range $ii, $cc := $word}}{{if eq $cc $c}}{{$col = $em.Yl}}{{$word.Set $ii 0}}{{end}}{{end}}
+      {{- sub $c 97|index $col|printf "<:%c_:%d>" $c|$line.Set $i}}{{end}}{{end}}
 
-        {{- range $i, $c := $chars}}{{if not (index $line $i)}}{{$col := $em.Gr}}
-          {{- range $ii, $cc := $word}}{{if eq $cc $c}}{{$col = $em.Yl}}{{$word.Set $ii 0}}{{end}}{{end}}
-          {{- sub $c 97|index $col|printf "<:%c_:%d>" $c|$line.Set $i}}
-        {{- end}}{{end}}
+      {{joinStr "" $line.StringSlice|print $emb.Description "\n"|$emb.Set "Description"}}
+      {{if eq .Game.Word $input}}{{$won = true}}{{else}}{{add .Game.Stage 1|.Game.Set "Stage"}}{{end}}
+    {{else}}{{$err = print `"` $input `" isn't a valid word`}}{{end}}
+  {{end}}
 
-        {{- joinStr "" $line.StringSlice|print $emb.Description "\n"|$emb.Set "Description"}}
-        {{- if eq .Word $msg}}{{$won = true}}{{end}}
-        {{- add .Stage 1|.Set "Stage"}}
-      {{- else}}{{$err = print `"` $msg `" isn't a valid word`}}{{end}}
-    {{- end}}
-  {{- end}}
+  {{if or (eq .Game.Stage 6) $won}}{{$.User.Mention}} game over! You {{or (and $won "won 🎉") "lost :("}}
+    {{$stats := or (dbGet 10 "wordle_stats").Value (sdict "Freq" (cslice 0 0 0 0 0 0))}}{{.Stats.Set "Freq" (or .Stats.Freq (cslice 0 0 0 0 0 0))}}{{$footer := ""}}
 
-  {{- if or (gt .Stage 5) $won}}
-    {{- $.User.Mention}} game over! You {{or (and $won "won") "lost"}}!
+    {{if $won}}{{$footer = print .Usr ` guessed the word on stage ` (add .Game.Stage 1) "!"}}
+      {{add .Stats.Win 1|.Stats.Set "Win"}}{{add $stats.Win 1|$stats.Set "Win"}}
+      {{$stats.Freq.Set .Game.Stage (index $stats.Freq .Game.Stage|add 1)}}{{.Stats.Freq.Set .Game.Stage (index .Stats.Freq .Game.Stage|add 1)}}
+    {{else}}{{$footer = print .Usr ` didn't guess the word "` .Game.Word `" within 6 tries :(`}}
+      {{add .Stats.Loss 1|.Stats.Set "Loss"}}{{add $stats.Loss 1|$stats.Set "Loss"}}
+    {{end}}
 
-    {{- $stats := sdict "Freq" (cslice 0 0 0 0 0 0)}}{{with dbGet 10 "wordle_stats"}}{{$stats = .Value}}{{end}}
+    {{$emb.Set "footer" (sdict "text" $footer)}}{{.Del "Game"}}{{dbSet 10 "wordle_stats" $stats}}
+  {{end}}
 
-    {{- if $won}}
-      {{- add $data.Stats.Win 1|$data.Stats.Set "Win"}}
-      {{- add $stats.Win 1|$stats.Set "Win"}}
-      {{- $stats.Freq.Set (sub $data.Game.Stage 1) (sub $data.Game.Stage 1|index $stats.Freq|add 1)}}
-    {{- else}}
-      {{- add $data.Stats.Loss 1|$data.Stats.Set "Loss"}}
-      {{- add $stats.Loss 1|$stats.Set "Loss"}}
-      {{- print $data.Usr ` didn't guess the word "` .Word `" within 6 tries :(`|sdict "text"|$emb.Set "footer"}}
-    {{- end}}
-
-    {{- $data.Del "Game"}}
-    {{- dbSet 10 "wordle_stats" $stats}}
-  {{- end}}
-
-  {{- if $err}}{{$.User.Mention}}, {{$err}}! {{deleteResponse 10}}
-  {{- else if $emb}}
-    {{- editMessage nil .MessageID (cembed $emb)}}
-    {{- dbSet $.User.ID "wordle" $data}}
-    {{- $_ := dbIncr $.User.ID "wordle" (fdiv $data.Stats.Win $data.Stats.Loss)}}
-  {{- end}}
-{{- end}}{{end}}
+  {{if $err}}{{$.User.Mention}}, {{$err}}! {{deleteResponse 10}}
+  {{else if $emb}}
+    {{editMessage nil $msg (cembed $emb)}}
+    {{dbSet $.User.ID "wordle" .}}{{$_ := dbIncr $.User.ID "wordle" (fdiv .Stats.Win .Stats.Loss)}}
+  {{end}}
+{{end}}{{end}}
