@@ -14,12 +14,6 @@ General information on YAGPDB.xyz custom commands is available in the [documenta
 
 ## Directory Hierarchy/Structure
 
-<details><summary>Administrative</summary>
-
-- [Export all CCs](administrative/exportCC.gotmpl)  
-
-</details>
-
 <details><summary>Code Snippets</summary>
 
 - [Decode caesar cipher](code_snippets/caesar.gotmpl)  
@@ -44,6 +38,7 @@ General information on YAGPDB.xyz custom commands is available in the [documenta
 - [Convert colour](utility/colourConvert.gotmpl)  
 - [Display Data Contents](utility/displayData.gotmpl)  
 - [Show server emojis](utility/emojis.gotmpl)  
+- [Export all CCs](utility/exportCC.gotmpl)  
 
 </details>
 
