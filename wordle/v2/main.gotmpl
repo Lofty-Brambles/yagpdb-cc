@@ -1,0 +1,68 @@
+{{/*
+
+This is a very rough overview of the features and components I plan to add in this updated version
+None of the mentioned features are guaranteed to be added, but I hope to implement as many as possible
+If you have more ideas, feel free to reach out to me on discord, mentioned in the main repo README.md
+
+  server:
+    stats, words
+    daily word
+    hourly word
+
+  server stats:
+    total games
+    wins
+    losses
+    distribution
+    player count
+    top player
+    words guessed
+    word count
+
+  user:
+    settings (default mode, errors toggles)
+    game(s? will need more logic for guessing a specific game, max 3? games)
+    separate daily/hourly/unlimited stats
+    name (set wordle nick?)
+    request new words
+
+  user stats:
+    total games
+    wins
+    losses
+    ratio and/or percentage
+    distribution
+    rank
+    words guessed
+    streak, current/max
+
+  user game:
+    word
+    length(?)
+    stage
+    message ID
+    channel ID
+    coloured alphabet (blue by default)
+    flags:
+      dm/hidden mode (accept spoilered message, delete immediately)
+      lingo mode (reveal first letter, must be used)
+      gibberish mode (any valid length string)
+      hard mode (green must be in same place, yellow must be in word)
+
+  daily/hourly:
+    expiry timestamp (lose game after expiry)
+    seperate lb?
+    weighted main lb score
+
+---
+
+  todo:
+    trim word list of "bad words"
+    split main guess cc and commands
+    reduce db entry count
+    log more info
+    implement daily/hourly words
+    help page for actual gameplay
+    cancel game on "cancel"/"end"
+
+*/}}
