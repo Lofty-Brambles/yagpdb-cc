@@ -26,7 +26,6 @@ It supports being invoked by `execCC`, with `.ExecData` being an sdict (fields s
     File    : Force file output, equivalent to the -file flag
     Embed   : Other fields to add to the embed -- everything is configurable apart from description
     NoEmbed : Completely remove the regular embed
-    Width   : Default width of field names, slice indices will still have a width of 3
     NoErr   : If errors occur, exit silently (don't send an error message to the target channel)
 */}}
 
