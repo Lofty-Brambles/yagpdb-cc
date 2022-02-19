@@ -1,0 +1,54 @@
+{{/*
+
+  server:
+    stats, words
+    daily word
+    hourly word
+
+  server stats:
+    total games
+    wins
+    losses
+    distribution
+    player count
+    top player
+    words guessed
+    word count
+
+  user:
+    game(s? will need more logic for guessing a specific game, max 3? games)
+    separate daily/hourly/unlimited stats
+    name (set wordle nick?)
+
+  user stats:
+    total games
+    wins
+    losses
+    distribution
+    rank
+    words guessed
+
+  user game:
+    word
+    length(?)
+    stage
+    message ID
+    channel ID
+    dm/hidden mode?
+    guesses
+    coloured alphabet (blue by default)
+
+  exclusive to daily/hourly:
+    expiry timestamp
+    seperate lb?
+    weighted main lb score
+
+---
+
+  todo:
+    trim word list of "bad words"
+    split main guess cc and commands
+    reduce db entry count
+    log more info
+
+*/}}
