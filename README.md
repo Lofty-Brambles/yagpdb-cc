@@ -6,9 +6,9 @@ This repository is a collection of custom commands made by me (Galen) that I hav
 If you need assistance with using or have any feedback on these CCs, you can either open an issue at this repo or contact me on discord (galen#8183, I am also in the YAGPDB.xyz support server)  
 
 If you don't know how to create a custom command, or just need a refresher/clarification, [this article](https://learn.yagpdb.xyz/the-custom-command-interface) explains the process.  
-I have also included similar documentation within comments in CCs and the associated README files as is explained in the [official YAGPDB CC website](https://yagpdb-cc.github.io/adding-ccs).  
-*Note: CCs with recommended regex triggers will include `-`, `?`, and mentioning the YAGPDB.xyz bot as prefixes.*  
-If you still need further clarification on adding CCs, please don't contact me directly, and instead go to the [official support server](https://discord.com/invite/4udtcA5).  
+I have also included similar documentation within comments in CCs and the associated README files as is explained in the [YAGPDB CC website](https://yagpdb-cc.github.io/adding-ccs).  
+*Note: CCs with recommended regex triggers will generally include `-`, `?`, and mentioning \@YAGPDB.xyz as prefixes.*  
+If you still need further clarification on adding CCs, please don't contact me directly, and instead go to the [support server](https://discord.com/invite/4udtcA5).  
 
 General information on YAGPDB.xyz custom commands is available in the [documentation](https://docs.yagpdb.xyz/) and [learning course](https://learn.yagpdb.xyz/).  
 
@@ -24,12 +24,6 @@ General information on YAGPDB.xyz custom commands is available in the [documenta
 <details><summary>Fun</summary>
 
 - [Wordle](fun/wordle)  
-
-</details>
-
-<details><summary>Tickets (under development)</summary>
-
-- [Configuration](tickets/ticketConfig.gotmpl)  
 
 </details>
 
