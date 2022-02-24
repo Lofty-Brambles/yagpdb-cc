@@ -70,17 +70,15 @@
   {{- /*
     Name     : Field name of current data or index of current element
     Target   : Actual data to format
-    FmtdText : Current formatted text to concatenate onto
+    Text     : Current formatted text to concatenate onto
     Indent   : Width of indent (added with printf, width of 2 spaces/level)
-    Guild    : See https://github.com/botlabs-gg/yagpdb/pull/1122
   */}}
   {{- $data := sdict
     "Name"     $query.Name
     "Target"   $query.Target
-    "FmtdText" ""
+    "Text" ""
     "Indent"   0
     "Width"    10
-    "Guild"    .Guild
   }}
 
   {{- /* Execute in line with target data */}}
@@ -89,33 +87,26 @@
     {{- $obj := sdict}}{{$t := sdict "S" (kindOf .Target) "L" (printf "%T" .Target)}}
     {{- if or (eq $t.S "map") (eq $t.L "templates.SDict" "*templates.SDict" "templates.Dict" "*templates.Dict")}}{{$obj = .Target}}{{.Set "Width" 10}}
     {{- else if or (eq $t.S "slice") (eq $t.L "templates.Slice" "*templates.Slice")}}{{$obj = .Target}}{{.Set "Width" 3}}
-    {{- else if eq $t.S "ptr" "struct"}}
-      {{- /* Circumvent structToSdict bug (see L75) */}}
-      {{- if eq $t.L "dstate.ChannelState"}}{{$obj = $.Guild.GetChannel .Target.ID}}
-      {{- else if eq $t.L "discordgo.Role"}}{{$obj = $.Guild.GetRole .Target.ID}}
-      {{- else if eq $t.L "discordgo.Emoji"}}{{$obj = $.Guild.GetEmoji .Target.ID}}
-      {{- else if eq $t.L "discordgo.VoiceState"}}{{$obj = $.Guild.GetVoiceState .Target.UserID}}
-      {{- else}}{{$obj = .Target}}{{end}}{{$obj = structToSdict $obj}}{{.Set "Width" 10}}
+    {{- else if eq $t.S "ptr" "struct"}}{{$obj = structToSdict .Target}}{{.Set "Width" 10}}
     {{- else}}{{$obj = sdict .Name .Target}}{{end}}
 
     {{- /* Format data, recurse if possible */}}
     {{- range $n, $val := $obj}}
       {{- if and (eq ($type:=kindOf $val) "map" "ptr" "struct" "slice") $val}}{{$ext := printf "%T" $val}}
-        {{- if in $ext "templates.Slice"}}{{$ext = "slice"}}{{else if in $ext "Dict"}}{{$ext = "dict"}}{{else if eq $type "ptr"}}{{$ext = "struct"}}{{else}}{{$ext = $type}}{{end}}
+        {{- if in $ext "Slice"}}{{$ext = "slice"}}{{else if in $ext "Dict"}}{{$ext = "dict"}}{{else if eq $type "ptr"}}{{$ext = "struct"}}{{else}}{{$ext = $type}}{{end}}
         {{- $new := sdict
           "Name"     $.Name
           "Target"   $val
-          "FmtdText" ""
+          "Text" ""
           "Indent"   (add $.Indent 2)
           "Width"    $.Width
-          "Guild"    $.Guild
         }}
 
         {{- template "deconstruct" $new}}
         {{- /* Format current data (next 3 lines) */}}
-        {{- printf "%s%*s%-*s:\n%s\n" $.FmtdText $.Indent "" $.Width (printf "%v (%s - %T)" $n $ext $val) $new.FmtdText|$.Set "FmtdText"}}
-      {{- else}}{{printf "%s%*s%-*v: %s\n" $.FmtdText $.Indent "" $.Width $n (json $val)|$.Set "FmtdText"}}{{end}}
-    {{- else}}{{printf "%*sUnsupported datatype, refer to JSON data:\n%[1]*s%s\n" $.Indent "" (json $.Target)|$.Set "FmtdText"}}{{end}}
+        {{- printf "%s%*s%-*s:\n%s\n" $.Text $.Indent "" $.Width (printf "%v (%s - %T)" $n $ext $val) $new.Text|$.Set "Text"}}
+      {{- else}}{{printf "%s%*s%-*v: %s\n" $.Text $.Indent "" $.Width $n (json $val)|$.Set "Text"}}{{end}}
+    {{- else}}{{printf "%*sUnsupported datatype, refer to JSON data:\n%[1]*s%s\n" $.Indent "" (json $.Target)|$.Set "Text"}}{{end}}
   {{- end}}
 
   {{- /* Partial paths to resource links */}}
@@ -137,17 +128,17 @@
   {{- end}}
 
   {{- /* Send file if length > 4000 */}}
-  {{- $chars := len $data.FmtdText}}
+  {{- $chars := len $data.Text}}
   {{- if gt $chars 4000}}
     {{- $desc = print $desc "\nRequested data is too large to display in an embed, please refer to the attached file."}}
-    {{- $msg.Set "file" $data.FmtdText}}
+    {{- $msg.Set "file" $data.Text}}
   {{- else if $query.File}}
     {{- /* Forced file output */}}
     {{- $desc = print $desc "\nForced file output, refer to the attached file."}}
-    {{- $msg.Set "file" $data.FmtdText}}
+    {{- $msg.Set "file" $data.Text}}
   {{- else}}
     {{- /* Default output */}}
-    {{- $desc = print $desc "\n```json\n" $data.FmtdText "```"}}
+    {{- $desc = print $desc "\n```json\n" $data.Text "```"}}
   {{- end}}
 
   {{- /* Send multiple files if necessary (over 90k chars, max is 100k) */}}
