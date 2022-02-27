@@ -1,0 +1,31 @@
+{{/*
+
+  Trigger Type: Regex
+  Trigger: \A(?i)(?-i:-|<@!?204255221017214977>)(?:wordle|wdl)(?:\s+(h|help|play|start|stop|end|cancel|l(?:eader)?b(?:oard)?|stat(?:istic)?s|info(?:rmation)?))?(?:\s+|\z)
+
+  Copyright: Galen CC, 2022-Present
+  Source: https://github.com/galen8183/yagpdb-cc
+  Released under license GPL version 3 (https://www.gnu.org/licenses/gpl-3.0.txt)
+
+*/}}
+
+{{/* Replace with your trigger, if using custom prefix */}}
+{{$re := `\A(?i)(?-i:-|<@!?204255221017214977>)(?:wordle|wdl)(?:\s+(h|help|play|start|stop|end|cancel|l(?:eader)?b(?:oard)?|stat(?:istic)?s|info(?:rmation)?))?(?:\s+|\z)`}}
+
+{{$err := ""}}{{$cmd := sdict "Cfg" sdict}}{{$flags := sdict "t" "Time" "p" "DM" "e" "Err" "h" "Hard" "l" "Lingo" "j" "Jargon" "c" "Chars"}}{{$msg := sdict}}
+{{range $i, $d := reFindAllSubmatches (print $re `(?:(?:<@!?)?(\d+)>?)?|\B-([hpljetc])(?:\s+(\d+))?`) (lower .Message.Content)}}
+  {{- if eq $i 0}}{{$cmd.Set "Cmd" (index . 1)}}{{$cmd.Set "Num" (index . 2|toInt)}}
+  {{- else}}{{with index . 4|$flags.Get}}{{or (index $d 5) true|$cmd.Cfg.Set .}}{{else}}{{$err = "Invalid flag(s)"}}{{end}}{{end}}
+{{end}}
+
+{{if eq $cmd.Cmd "" "h" "help"}}{{$msg = sdict "title" "Wordle/Wdl" "description" (print $syntax "\nA feature rich remake of wordle, entirely in discord!\nRun `wordle info` to see the rules")}}
+{{else if eq $cmd.Cmd "info" "rules" "game"}}{{$msg = sdict "title" "Wordle" "description" ""}}
+{{else if eq $cmd.Cmd "p" "play" "start" "begin"}}
+{{else if eq $cmd.Cmd "stop" "end" "cancel"}}
+{{end}}
+
+{{$cmd.Del "Flags"}}{{json $cmd}}
+{{if $err}}{{print $syntax "\nInvalid arguments provided: " $err}}
+{{else}}
+  {{sendMessage nil (cembed $msg)}}
+{{end}}

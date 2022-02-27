@@ -1,60 +1,96 @@
+{{$d := or (dbGet .User.ID "wordle").Value sdict}}
+
+{{if $d.Games}}
+  {{if $m := reFindAllSubmatches `` .Message.Content}}
+    {{with index $m 0}}
+    {{end}}
+  {{end}}
+{{end}}
+
+
+{{/* Example Fields
+
+  UserData:
+    Games : cslice GameData
+
+    Stats :
+      Game    : GameStats
+      Games   : int games started
+      Guesses : int valid guesses
+
+    Cfg   : sdict users configuration
+      DM        : bool hidden/DM mode
+      Errors    : bool show errors
+      Hard      : bool hard mode
+      Jargon    : bool unrestricted mode
+      Lingo     : bool lingo mode
+      TimeLimit : int  time limit in seconds
+      User      : PartUser
+
+
+  Server:
+    Words :
+      Added   : string added words
+      Daily   : string current daily word
+      Default : string default words
+      Hourly  : string current hourly word
+      Removed : string removed words
+      Request : cslice WordRequest
+
+    Stats :
+      Game     : GameStats
+      Guesses  : int      valid guesses
+      Players  : int      player count
+      TopDaily : PartUser previous highest daily user
+      TopUser  : PartUser highest ranked user
+
+    Cfg   :
+      AdminRoles : cslice administrator roles
+      DM         : bool   hidden/DM mode
+      EditRoles  : cslice list editor roles
+      Errors     : bool   show errors
+      Hard       : bool   hard mode
+      Jargon     : bool   unrestricted mode
+      Lingo      : bool   lingo mode
+      ModRoles   : cslice moderator roles
+      TimeLimit  : int    time limit in seconds
+
+
+  GameData:
+    Alpha    : cslice letters
+    CID      : int    channel id
+    MID      : int    message id
+    Stage    : int    stage of game
+    Settings :
+      DM        : bool hidden/DM mode
+      Errors    : bool show errors
+      Hard      : bool hard mode
+      Jargon    : bool unrestricted mode
+      Lingo     : bool lingo mode
+      TimeLimit : int  time limit in seconds
+    Word     : string target word
+
+  GameStats:
+    Wins     : int    wins
+    Losses   : int    losses
+    Distro   : cslice win distribution
+    Streak   : int    current streak
+    Record   : int    max streak
+    [Games      = wins + losses]
+    [Ratio      = wins / losses]
+
+  PartUser:
+    ID     : int    userid
+    Name   : string display name
+    String : string username#discrim
+
+  WordRequest:
+    PartUser
+    Word : string requested word
+
+*/}}
+
 {{/*
-
-This is a very rough overview of the features and components I plan to add in this updated version
-None of the mentioned features are guaranteed to be added, but I hope to implement as many as possible
-If you have more ideas, feel free to reach out to me on discord, mentioned in the main repo README.md
-
-  server:
-    stats, words
-    daily word
-    hourly word
-
-  server stats:
-    total games
-    wins
-    losses
-    distribution
-    player count
-    top player
-    words guessed
-    word count
-
-  user:
-    settings (default mode, errors toggles)
-    game(s? will need more logic for guessing a specific game, max 3? games)
-    separate daily/hourly/unlimited stats
-    name (set wordle nick?)
-    request new words
-
-  user stats:
-    total games
-    wins
-    losses
-    ratio and/or percentage
-    distribution
-    rank
-    words guessed
-    streak, current/max
-
-  user game:
-    word
-    length(?)
-    stage
-    message ID
-    channel ID
-    coloured alphabet (blue by default)
-    flags:
-      dm/hidden mode (accept spoilered message, delete immediately)
-      lingo mode (reveal first letter, must be used)
-      gibberish mode (any valid length string)
-      hard mode (green must be in same place, yellow must be in word)
-
-  daily/hourly:
-    expiry timestamp (lose game after expiry)
-    seperate lb?
-    weighted main lb score
-
----
 
   todo:
     trim word list of "bad words"
