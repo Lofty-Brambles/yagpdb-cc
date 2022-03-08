@@ -1,0 +1,22 @@
+{{/*
+  Trigger Type: Command
+  Trigger: adjust
+
+  Copyright: Galen CC, 2021-Present
+  Source: https://github.com/galen8183/yagpdb-cc
+  Released under license GPL version 3 (https://www.gnu.org/licenses/gpl-3.0.txt)
+*/}}
+
+{{/* Get the server's prefix, escape special characters for use in regex */}}
+{{$prefix := exec "prefix"}}
+{{$prefix = reReplace `[\\.+*?()|[\]{}^]|(\$)` ($p := len $prefix|add -1|slice $prefix (str .Guild.ID|len|add 15)) "\\$0$1"}}
+
+{{/* Parse input trigger, construct new trigger with custom prefix */}}
+{{$re := `\A(?:\\A|\(\?i\)|\((?:\?:)?.+?(?:\|<@!\?204255221017214977>(?:\\s[?*+]?)?\))|\|?\\?[-?!](?:\\s[?*+]?)?|\\s[?*+]?)+(.+?)(?:\((?:\?:)?(?:\\s| )[?*+]?\|(?:\\z|\$)\)|\\b)*\z`}}
+{{$trigger := trimSpace .StrippedMsg}}
+{{$adjust := reReplace $re $trigger (print `\A(?i)(?-i:` $prefix `|<@!?204255221017214977>)\s*$1(?:\s+|\z)`)}}
+
+{{sendMessage nil (cembed
+  "title" "Adjust Regex Trigger"
+  "description" (printf "Original trigger:\n```\n%s```Adjusted trigger:\n```\n%s```\n⚠️ Note: The adjusted trigger may not be correct, and it should be tested before using!\nTest the adjusted trigger at [Regex101](https://regex101.com)" $trigger $adjust)
+)}}

@@ -1,5 +1,14 @@
 # Utility
 
+## Adjust Prefix
+
+Adjusts regular expression (regex) CC triggers to accomodate a server's custom prefix  
+Simply run the command with the non-adjusted prefix after the command, and it will adjust the regex to your server's prefix!  
+
+Most common regex trigger formats are taken into account, but the adjusted trigger should always be tested before using.  
+
+---
+
 ## Colour Converter
 
 Converts colours from decimal/hex to:  
