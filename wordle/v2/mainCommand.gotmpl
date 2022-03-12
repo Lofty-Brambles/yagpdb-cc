@@ -1,0 +1,60 @@
+{{/*
+  Trigger Type: Regex
+  Trigger: TBD
+
+  Copyright: Galen CC, 2021-Present
+  Source: https://github.com/galen8183/yagpdb-cc
+  Released under license GPL version 3 (https://www.gnu.org/licenses/gpl-3.0.txt)
+*/}}
+
+{{$cfg := sdict
+  "Aliases" (cslice "Wordle" "Wordl" "Words") "Desc" "The fun game of wordle, fully playable in Discord!\nFor rules and gameplay examples, see [the official website](https://nytimes.com/games/wordle)" "Colour" 0x40E0D0
+  "Cmds" (cslice
+    (sdict "Name" "Play" "Aliases" (cslice "Play" "P" "Start" "Begin") "Desc" "Start a game of wordle" "Args" cslice "Flags" (sdict "Six" (sdict "Type" "switch" "Desc" "Choose a six letter word")))
+    (sdict "Name" "Stop" "Aliases" (cslice "Stop" "End" "Cancel") "Desc" "End your current game of wordle" "Args" cslice)
+    (sdict "Name" "Stats" "Aliases" (cslice "Stats" "Info" "Rank") "Desc" "See stats on wordle games, from the entire server or any user" "Args" (cslice (sdict "Type" "integer" "Desc" "Target user")))
+    (sdict "Name" "LB" "Aliases" (cslice "Lb" "Leaderboard" "Top" "Ranks") "Desc" "See the wordle leaderboard in this server" "Args" (cslice (sdict "Type" "integer" "Desc" "Page")))
+  )
+}}
+
+{{$ := sdict $}}{{$err := ""}}{{$help := false}}{{$cmd := sdict}}{{$position := 0}}
+{{range $k, $v := sdict "Cmd" "" "Args" dict}}{{$.Set (print "CC" $k) ($.Get $k)}}{{$.Set $k $v}}{{end}}
+{{range $i, $a := reFindAllSubmatches `(?:--?(\w+(?:-\w+)*)\s+)?("((?:\\["\\]|[^"])+)"|'((?:\\'|[^'])+)'|\x60((?:\\\x60|[^\x60])+)\x60|(\S+))\s*` .StrippedMsg}}{{$help = or $help (eq (index $a 0|lower) "h" "help" "how" "command")}}
+  {{- if not $cmd}}{{range $cfg.Cmds}}{{if inFold .Aliases (index $a 6)}}{{.Set "NumArgs" (len .Args)}}{{$cmd = .}}{{$.Set "Cmd" .Name}}{{end}}{{end}}
+  {{- else if not $err}}{{$curr := false}}{{$cont := true}}{{$arg := or (index $a 3) (index $a 4) (index $a 5) (index $a 6)}}
+    {{- with (or $cmd.Flags sdict).Get (index $a 1|lower|title)}}
+      {{- if eq .Type "switch"}}{{if eq (lower $arg) "t" "true" "1"}}{{.Set "Val" true}}{{$cont = false}}{{else if eq (lower $arg) "f" "false" "0"}}{{.Set "Val" false}}{{$cont = false}}{{end}}{{$.Args.Set .Name .Val}}{{else}}{{$curr = .}}{{end}}
+    {{- end}}{{if $cont}}
+    {{- if not $curr}}{{if lt $position $cmd.NumArgs}}{{$curr = index $cmd.Args $position}}{{$curr.Set "Name" $position}}{{$position = add $position 1}}{{else}}{{$curr = index $cmd.Args (sub $cmd.NumArgs 1)}}{{end}}{{end}}
+    {{- with $curr}}{{$in := or (reFind `\b\d{17,19}\b|\A0(?:\.0)?\z` $arg) $arg}}{{$v := false}}{{$e := false}}
+      {{- if or ($vv:=toInt $in) (eq $in "0" "0.0")}}{{$v =  $vv}}{{else}}{{$e = true}}{{end}}
+      {{- if $e}}{{$err = printf "`%s` is not a valid %s" $arg (lower .Type)}}{{else}}{{$.Args.Set .Name $v}}{{end}}
+    {{- end}}{{end}}
+  {{- end}}
+{{- end}}
+
+{{if or $cmd $help}}
+  {{if or $help $err}}{{$s := ""}}
+    {{with $cmd}}{{$s = print $s "```\n" .Name}}
+      {{range $n, $d := .Args}}{{$s = printf "%s [%s:%s]" $s .Desc (title .Type)}}{{end}}
+      {{if .Flags}}{{$s = print $s "``````\n"}}{{range $n,$d:=.Flags}}{{$s = printf "%s\n[-%s %[2]s:%s - %s]" $s $n (title .Type) .Desc}}{{end}}{{end}}
+      {{$s = print $s "```\n" (or (and $help .Desc) "")}}{{else}}{{range $cfg.Cmds}}{{$s = printf "%s`%s %s`: %s\n\n" $s "Wordle" (joinStr "/" .Aliases.StringSlice) .Desc}}{{end}}{{$s = print $s $cfg.Desc}}{{end}}
+    {{if $help}}{{sendMessage nil (cembed "title" (joinStr "/" (or $cmd.Aliases $cfg.Aliases cslice).StringSlice) "description" $s "color" (or $cmd.Colour $cmd.Color $cfg.Colour $cfg.Color 0))}}{{else}}{{print $s "Invalid arguments provided: " $err}}{{end}}
+  {{else}}{{with $}}
+    {{.Set "Data" (or (dbGet .User.ID "wordle").Value (sdict
+      "W" 0
+      "L" 0
+      "Dist" (cslice 0 0 0 0 0 0)
+    ))}}
+
+    {{if eq .Cmd "Play"}}
+    {{else if eq .Cmd "Stop"}}
+    {{else if eq .Cmd "Stats"}}
+    {{else if eq .Cmd "LB"}}
+    {{end}}
+
+
+{{$rem := cslice "CCRunCount" "channel" "ChannelOrThreadParent" "CmdArgs" "DiscordEpoch" "Guild" "IsPremium" "ReactionMessage" "Server" "TimeHour" "TimeMinute" "TimeSecond" "UnixEpoch" "User"}}{{range $rem}}{{$.Del .}}{{$.Del (lower .)}}{{end}}{{.Set "Args" (or .Args sdict)}}{{execCC 83 nil 0 (sdict "Target" . "NoErr" true)}}
+
+  {{end}}{{end}}
+{{end}}
