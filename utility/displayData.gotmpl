@@ -51,7 +51,7 @@
 {{/* Ignore errors for help */}}
 {{if eq $query.Name "Help" "H"}}{{sendMessage nil (cembed
   "title" "Data/Struct/Viewdata/Viewstruct"
-  "description" (print $syntax "\nDisplays a various data in a human-readable format\nRecursively deconstructs composite datatypes, essentially recreating the `json` function")
+  "description" (print $syntax "\nDisplays a various data in a human-readable format\nRecursively deconstructs composite datatypes, essentially recreating and improving the `json` function")
 )}}
 {{else if $err}}
   {{if not $query.NoErr}}{{print $syntax "\nInvalid arguments passed: " $err}}{{end}}
@@ -74,7 +74,7 @@
 
     {{- /* Format data, recurse if possible */}}
     {{- range $n, $val := $d}}{{$new := false}}
-      {{- if eq ($t:=kindOf $val true) "map" "slice"}}{{if len $val}}{{$new = $val}}{{end}}{{else if eq $t "struct"}}{{if in (printf "%T" $val) "time.Time"}}{{$val = $val.MarshalJSON}}{{else}}{{$new = $val}}{{end}}{{end}}
+      {{- if eq ($t:=kindOf $val true) "map" "slice"}}{{if len $val}}{{$new = $val}}{{end}}{{else if eq $t "struct"}}{{$new = and (printf "%T" $val|in "*time.Time"|not) $valStr}}{{end}}
 
       {{- if $new}}
         {{- template "parse" $data := sdict "Target" $val "Text" "" "Indent" (print $.Indent "  ") "Width" $.Width}}
