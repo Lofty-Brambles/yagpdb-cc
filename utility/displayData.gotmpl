@@ -15,18 +15,19 @@
   {{- $n := index $v 1|lower}}{{$id := or (index $v 2) (index $v 3)|toInt}}
 
   {{- with $query}}
-    {{- if eq $n "f" "file"}}{{.Set "File" true}}
-    {{- else if eq $n "c" "chan"}}{{.Set "ChannelID" $id}}
-    {{- else if eq $n "m" "msg"}}{{.Set "MessageID" $id}}
-    {{- else if eq $n "v" "voice"}}{{$query = sdict "Name" "Voice State" "Target" ($.Guild.GetVoiceState $id)}}
-    {{- else if eq $n "u" "user"}}{{$query = sdict "Name" "Member" "Target" (getMember $id)}}
-    {{- else if eq $n "r" "role"}}{{$query = sdict "Name" "Role" "Target" (getRole $id)}}
-    {{- else if eq $n "e" "emoji"}}{{$query = sdict "Name" "Emoji" "Target" ($.Guild.GetEmoji $id)}}
-    {{- else if eq $n "dbk" "dbkey"}}{{.Set "DBKey" (index $v 7)}}
-    {{- else if eq $n "dbu" "dbuser"}}{{.Set "DBUser" (index $v 7|toInt|or $id)}}
-    {{- else if eq $n "skip" "dbskip"}}{{.Set "DBSkip" (index $v 7|toInt|or $id)}}
-    {{- else if and (eq $n "reply") $.Message.ReferencedMessage}}{{.Set "MessageID" $.Message.ReferencedMessage.ID}}
-    {{- else if and (eq $n "l" "link") (eq (index $v 4|toInt) $.Guild.ID)}}{{$query = sdict "Name" "Message" "ChannelID" (index $v 5|toInt) "MessageID" (index $v 6|toInt)}}
+    {{- if eq (index $v 0 0) '-'}}
+      {{- if eq $n "f" "file"}}{{.Set "File" true}}
+      {{- else if eq $n "c" "chan"}}{{.Set "ChannelID" $id}}
+      {{- else if eq $n "m" "msg"}}{{.Set "MessageID" $id}}
+      {{- else if eq $n "v" "voice"}}{{$query = sdict "Name" "Voice State" "Target" ($.Guild.GetVoiceState $id)}}
+      {{- else if eq $n "u" "user"}}{{$query = sdict "Name" "Member" "Target" (getMember $id)}}
+      {{- else if eq $n "r" "role"}}{{$query = sdict "Name" "Role" "Target" (getRole $id)}}
+      {{- else if eq $n "e" "emoji"}}{{$query = sdict "Name" "Emoji" "Target" ($.Guild.GetEmoji $id)}}
+      {{- else if eq $n "dbk" "dbkey"}}{{.Set "DBKey" (index $v 7)}}
+      {{- else if eq $n "dbu" "dbuser"}}{{.Set "DBUser" (index $v 7|toInt|or $id)}}
+      {{- else if eq $n "skip" "dbskip"}}{{.Set "DBSkip" (index $v 7|toInt|or $id)}}
+      {{- else if and (eq $n "reply") $.Message.ReferencedMessage}}{{.Set "MessageID" $.Message.ReferencedMessage.ID}}
+      {{- else if and (eq $n "l" "link") (eq (index $v 4|toInt) $.Guild.ID)}}{{$query = sdict "Name" "Message" "ChannelID" (index $v 5|toInt) "MessageID" (index $v 6|toInt)}}{{end}}
     {{- else if not (or .Name .MessageID .ChannelID .DBKey .DBUsr)}}{{.Set "Name" (title $n)}}{{.Set "Target" (or (($ctx := sdict $).Get (index $v 1)) (lower $n|title|$ctx.Get))}}{{end}}
   {{- end}}
 {{- end}}{{else}}
@@ -74,7 +75,7 @@
 
     {{- /* Format data, recurse if possible */}}
     {{- range $n, $val := $d}}{{$new := false}}
-      {{- if eq ($t:=kindOf $val true) "map" "slice"}}{{if len $val}}{{$new = $val}}{{end}}{{else if eq $t "struct"}}{{$new = and (printf "%T" $val|in "*time.Time"|not) $valStr}}{{end}}
+      {{- if eq ($t:=kindOf $val true) "map" "slice"}}{{if len $val}}{{$new = $val}}{{end}}{{else if eq $t "struct"}}{{$new = and (printf "%T" $val|in "*time.Time"|not) $val}}{{end}}
 
       {{- if $new}}
         {{- template "parse" $data := sdict "Target" $val "Text" "" "Indent" (print $.Indent "  ") "Width" $.Width}}
