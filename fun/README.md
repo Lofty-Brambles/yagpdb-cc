@@ -23,3 +23,5 @@ Choose your own custom minefield size, number of bombs, and more.
 
 Easy to understand user interface, simply type coordinates to dig or flag a tile!  
 No setup is required, the game is fully playable out of the box.  
+
+Credit to <https://github.com/kying18/minesweeper/blob/main/minesweeper.py>, this is largely based on this script!  
