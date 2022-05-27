@@ -10,8 +10,8 @@
 {{/* "Cmd" is regex for command group, "Dims" is board dimensions (square), "Mines" is number of mines to place */}}
 {{$cfg := sdict
   "Cmd" `\A(?i)(?-i:-|<@!?204255221017214977>)\s*mines(?:weeper)?(?:\s+|\z)`
-  "Dims" 10
-  "Mines" 10
+  "Dims" 16
+  "Mines" 20
   "Flag" '>'
 }}
 
@@ -98,7 +98,7 @@
       {{/* If error is on user target (not from recursing), send error message */}}
       {{if $d.Err}}{{if and (eq $d.Err.Y $d.Y) (eq $d.Err.X $d.X)}}{{$d.Err.S}}! {{deleteResponse 15}}{{end}}{{end}}
 
-      {{if ge $d.Dug (sub (pow $d.Cfg.Dims 2) $d.Cfg.Mines | toInt)}}{{/* If all squares dug (excluding bombs) user won the game */}}
+      {{if gt $d.Dug (sub (pow $d.Cfg.Dims 2) $d.Cfg.Mines | toInt)}}{{/* If all squares dug (excluding bombs) user won the game */}}
         Game over, you won!!!!
         {{$d = sdict}}
       {{end}}
