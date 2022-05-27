@@ -1,0 +1,178 @@
+{{/*
+  Trigger Type: Regex
+  Trigger: \A(?i)(?:(f(?:lag)?\s+)?([0-9])[,\s]\s*([0-9])\z|(?-i:-|<@!?204255221017214977>)\s*mines(?:weeper)?(?:\s+|\z))
+
+  Copyright: Galen CC, 2022-Present
+  Source: https://github.com/galen8183/yagpdb-cc
+  Released under license GPL version 3 (https://www.gnu.org/licenses/gpl-3.0.txt)
+*/}}
+
+{{/* "Cmd" is regex for command group, "Dims" is board dimensions (square), "Mines" is number of mines to place */}}
+{{$cfg := sdict
+  "Cmd" `\A(?i)(?-i:-|<@!?204255221017214977>)\s*mines(?:weeper)?(?:\s+|\z)`
+  "Dims" 10
+  "Mines" 10
+  "Flag" '>'
+}}
+
+{{$d := (dbGet .User.ID "minesweeper").Value}}
+
+{{if reFind $cfg.Cmd .Message.Content}}{{/* Check if command was ran first */}}
+  {{$err := ""}}{{$syntax := joinStr "\n" "```" "Minesweeper play" "Minesweeper end" "Minesweeper fetch" "```"}}
+  {{$cmd := reReplace (print $cfg.Cmd `|\s+\z`) (lower .Message.Content) ""}}
+
+  {{if eq $cmd "start" "play"}}{{if not $d}}
+    {{/* Start new game */}}
+    {{$d = sdict
+      "ChannelID" $.Channel.ID
+      "Cfg" $cfg
+      "Board" cslice
+      "Dug" 0
+    }}
+
+    {{/* Initialise the minefield -- create 2d slice with each tile set to "" */}}
+    {{range $y := seq 0 $d.Cfg.Dims}}
+      {{- $d.Set "Board" ($d.Board.Append cslice)}}
+      {{- range seq 0 $d.Cfg.Dims}}{{$d.Board.Set $y ( (index $d.Board $y).Append (sdict "Val" 0 "Dug" false "Flag" false) )}}{{end}}
+    {{- end}}
+
+    {{- $numMines := 0}}{{/* Place mines randomly until all are placed */}}
+    {{- while lt $numMines $d.Cfg.Mines}}
+      {{- $n := pow $d.Cfg.Dims 2|add -1|randInt}}
+      {{- $y := div $n $d.Cfg.Dims}}{{$x := mod $n $d.Cfg.Dims|toInt}}{{/* x is row, y is column */}}
+
+      {{- if eq (index $d.Board $y $x).Val -1}}{{continue}}{{end}}{{/* If mine is already placed, continue */}}
+
+      {{- (index $d.Board $y $x).Set "Val" -1}}
+      {{- $numMines = add $numMines 1}}{{/* Placed a bomb, increment counter */}}
+    {{- end}}
+
+    {{- /* Calculate numbered tiles */}}
+    {{- range $y := seq 0 $d.Cfg.Dims}}
+      {{- range $x := seq 0 $d.Cfg.Dims}}
+        {{- if eq (index $d.Board $y $x).Val -1}}{{continue}}{{end}}{{/* Ignore bomb tiles */}}
+
+        {{- $neighbours := 0}}{{/* Stay within bounds (only check neighbouring tiles for bombs) */}}
+        {{- $a := seq (sub $y 1 | cslice 0 | execTemplate "max") (cslice (sub $d.Cfg.Dims 1) (add $y 1) | execTemplate "min" | add 1)}}
+        {{- $b := seq (sub $x 1 | cslice 0 | execTemplate "max") (cslice (sub $d.Cfg.Dims 1) (add $x 1) | execTemplate "min" | add 1)}}
+
+        {{- range $r := $a}}
+          {{- range $c := $b}}
+            {{- if eq (index $d.Board $r $c).Val -1}}{{$neighbours = add $neighbours 1}}{{end}}
+          {{- end}}
+        {{- end}}
+
+        {{- (index $d.Board $y $x).Set "Val" $neighbours}}{{/* Set tile to number of neighbouring bombs */}}
+      {{- end}}
+    {{- end}}
+
+    {{$d.Set "MessageID" (sendMessageRetID nil (printf "Your game has begun! Enter `x, y` to dig, `flag x, y` to flag\n```\n%s```" (execTemplate "display" $d) ) )}}
+  {{else}}{{$err = "You're already in a game (tip: use `-minesweeper end`)"}}{{end}}{{else if eq $cmd "end"}}{{if $d}}
+    {{/* End existing game, show full unfinished board in new message */}}
+    {{range $y := seq 0 $d.Cfg.Dims}}{{range $x := seq 0 $d.Cfg.Dims}}{{(index $d.Board $y $x).Set "Dug" true}}{{end}}{{end}}
+    {{printf "Ended your game!\n```\n%s```" (execTemplate "display" $d)}}
+    {{$d = sdict}}
+  {{else}}{{$err = "No ongoing game found"}}{{end}}{{else if eq $cmd "fetch"}}{{if $d}}
+    {{deleteMessage $d.ChannelID $d.MessageID 0}}
+    {{$d.Set "ChannelID" $.Channel.ID}}
+    {{$d.Set "MessageID" (sendMessageRetID nil (printf "Here is your ongoing game! Enter `x, y` to dig, `flag x, y` to flag\n```\n%s```" (execTemplate "display" $d) ) )}}
+  {{else}}{{$err = "No ongoing game found"}}{{end}}{{else}}{{$err = "No enough arguments passed"}}{{end}}
+
+  {{if $err}}{{print $syntax "\nInvalid arguments provided: " $err}}{{end}}
+{{else if and $d (eq (toInt $d.ChannelID) .Channel.ID) ($play := reFindAllSubmatches `\A(?i)(f(?:lag)?\s+)?([0-9])[,\s]\s*([0-9])\z` .Message.Content)}}{{/* If user is playing a game, check for valid input (x,y / x,  y / x y / etc.) */}}
+  {{if and (lt ($x := index $play 0 2|toInt) $d.Cfg.Dims) (lt ($y := index $play 0 3|toInt) $d.Cfg.Dims)}}{{/* Check that play is within bounds (no need for negative check as regex only matches positive ints) */}}
+    {{$good := true}}
+
+    {{if index $play 0 1}}{{(index $d.Board $y $x).Set "Flag" (not (index $d.Board $y $x).Flag)}}
+    {{else}}
+      {{/* Set X and Y, dig tile */}}
+      {{$d.Set "Y" $y}}{{$d.Set "X" $x}}{{$d.Set "Depth" 0}}
+      {{$good = execTemplate "dig" $d}}
+    {{end}}
+
+    {{if $good}}{{/* If mine wasn't hit, update board */}}
+      {{editMessage nil $d.MessageID (printf "Enter `x, y` to dig, `flag x, y` to flag\n```\n%s```" (execTemplate "display" $d) )}}
+      {{deleteTrigger 5}}
+
+      {{/* If error is on user target (not from recursing), send error message */}}
+      {{if $d.Err}}{{if and (eq $d.Err.Y $d.Y) (eq $d.Err.X $d.X)}}{{$d.Err.S}}! {{deleteResponse 15}}{{end}}{{end}}
+
+      {{if ge $d.Dug (sub (pow $d.Cfg.Dims 2) $d.Cfg.Mines | toInt)}}{{/* If all squares dug (excluding bombs) user won the game */}}
+        Game over, you won!!!!
+        {{$d = sdict}}
+      {{end}}
+    {{else}}{{/* Mine was hit, show full board in new message */}}
+      {{range $y := seq 0 $d.Cfg.Dims}}{{range $x := seq 0 $d.Cfg.Dims}}{{(index $d.Board $y $x).Set "Dug" true}}{{end}}{{end}}
+      {{sendMessage nil (printf "Game over! You lost :(\n```\n%s```" (execTemplate "display" $d) )}}
+      {{$d = sdict}}
+    {{end}}
+  {{else}}Invalid play, try again :({{end}}
+{{end}}
+
+{{/* Update database with newest game data or delete entry */}}
+{{if $d}}{{dbSet .User.ID "minesweeper" $d}}{{else}}{{dbDel .User.ID "minesweeper"}}{{end}}
+
+{{define "display"}}{{/* "display" returns the board in a human readable format */}}
+  {{- $m := "  -"}}{{$y := "   "}}
+
+  {{- /* Make it look nice -- add line of '-' between top and minefield */}}
+  {{- range seq 0 .Cfg.Dims}}
+    {{- $m = print $m "---"}}
+    {{- $y = printf "%s%d  " $y .}}
+  {{- end}}
+
+  {{- $m = print $m "\n"}}
+
+  {{- range $i, $l := .Board}}{{/* Print board after proper data has been inserted */}}
+    {{- $line := ""}}
+    {{- range $l}}
+      {{- $chr := ' '}}{{if .Flag}}{{$chr = $.Cfg.Flag}}{{end}}
+      {{- if .Dug}}{{$chr = add .Val 48}}{{if eq .Val -1}}{{$chr = '*'}}{{end}}{{end}}
+      {{- $line = printf "%s|%-2c" $line $chr}}
+    {{- end}}
+
+    {{- $m = print $i " " $line "|\n" $m}}
+  {{- end}}
+
+  {{- /* See above, make it look nice */}}
+  {{- $m = print "\n" $m}}{{range seq 0 .Cfg.Dims}}{{$m = print "---" $m}}{{end}}{{$m = print "  -" $m}}
+  {{- return print $m  $y -}}
+{{end}}
+
+{{define "dig"}}{{/* "dig" digs a given tile, and returns a boolean if it was a safe move -- "dig" recurses if an empty tile was dug to dig all 0 valued and neighbouring tiles */}}
+  {{- $curr := index .Board .Y .X}}
+
+  {{- if $curr.Flag}}{{/* If tile is flagged, don't dig, return safe move status, error */}}
+    {{- .Set "Err" (sdict "Y" .Y "X" .X "S" "Tile is flagged")}}
+    {{- return true}}
+  {{- end}}
+
+  {{- .Set "Dug" (add .Dug 1)}}{{$curr.Set "Dug" true}}
+
+  {{- if eq $curr.Val -1}}{{return false}}
+  {{- else if gt $curr.Val 0}}{{return true}}{{end}}
+
+  {{- /* (index .Board .Y .X).Val == 0, recursively dig neighbouring tiles */}}
+
+  {{- /* Stay within bounds of neighbouring tiles for this recursion */}}
+  {{- $a := seq (sub .Y 1 | cslice 0 | execTemplate "max") (cslice (add .Y 1) (sub .Cfg.Dims 1) | execTemplate "min" | add 1)}}
+  {{- $b := seq (sub .X 1 | cslice 0 | execTemplate "max") (cslice (add .X 1) (sub .Cfg.Dims 1) | execTemplate "min" | add 1)}}
+
+  {{- range $r := $a}}
+    {{- range $c := $b}}
+      {{- /* If tile was already dug, don't dig again */}}
+      {{- if (index $.Board $r $c).Dug}}{{continue}}{{end}}
+
+      {{- /* Continue recursing until a non-zero value or bomb is reached, ignore bombs being dug */}}
+      {{- $.Set "Y" $r}}{{$.Set "X" $c}}
+      {{- $_ := execTemplate "dig" $}}
+    {{- end}}
+  {{- end}}
+
+  {{- /* User dug "0", this is and unconditionally valid play */}}
+  {{- return true}}
+{{end}}
+
+{{/* Helpers for getting min/max of two values */}}
+{{define "min"}}{{if lt (index . 0) (index . 1)}}{{return index . 0}}{{end}}{{return index . 1}}{{end}}
+{{define "max"}}{{if gt (index . 0) (index . 1)}}{{return index . 0}}{{end}}{{return index . 1}}{{end}}

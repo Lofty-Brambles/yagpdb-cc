@@ -24,6 +24,7 @@ General information on YAGPDB.xyz custom commands is available in the [documenta
 <details><summary>Fun</summary>
 
 - [Wordle](fun/wordle)  
+- [Minesweeper](fun/minesweeper.gotmpl)  
 
 </details>
 

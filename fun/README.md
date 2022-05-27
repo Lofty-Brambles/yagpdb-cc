@@ -15,3 +15,11 @@ The only CCs required for gameplay is [main.gotmpl](./wordle/main.gotmpl) and th
 - Main CC: Allows you to play wordle!  
 - Config CC: Allows specified roles to edit the word list, change users' stats, and delete all the saved data.  
 - Pagination CC: Enables pagination for the leaderboard (Note: to initialise pagination, you must add one of the chosen reactions to a leaderboard message)!  
+
+## Minesweeper
+
+A simple, minimalistic minesweeper game with plenty of customisability.  
+Choose your own custom minefield size, number of bombs, and more.  
+
+Easy to understand user interface, simply type coordinates to dig or flag a tile!  
+No setup is required, the game is fully playable out of the box.  
