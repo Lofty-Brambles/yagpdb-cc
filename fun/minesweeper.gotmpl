@@ -1,6 +1,6 @@
 {{/*
   Trigger Type: Regex
-  Trigger: \A(?i)(?:(f(?:lag)?\s+)?([0-9])[,\s]\s*([0-9])\z|(?-i:-|<@!?204255221017214977>)\s*mines(?:weeper)?(?:\s+|\z))
+  Trigger: \A(?i)(?:(f(?:lag)?\s+)?([0-9]+)[,\s]\s*([0-9]+)\z|(?-i:-|<@!?204255221017214977>)\s*mines(?:weeper)?(?:\s+|\z))
 
   Copyright: Galen CC, 2022-Present
   Source: https://github.com/galen8183/yagpdb-cc
@@ -28,6 +28,7 @@
       "Cfg" $cfg
       "Board" cslice
       "Dug" 0
+      "Width" (sub $cfg.Dims 1 | str | len | add 2)
     }}
 
     {{/* Initialise the minefield -- create 2d slice with each tile set to "" */}}
@@ -79,7 +80,7 @@
   {{else}}{{$err = "No ongoing game found"}}{{end}}{{else}}{{$err = "No enough arguments passed"}}{{end}}
 
   {{if $err}}{{print $syntax "\nInvalid arguments provided: " $err}}{{end}}
-{{else if and $d (eq (toInt $d.ChannelID) .Channel.ID) ($play := reFindAllSubmatches `\A(?i)(f(?:lag)?\s+)?([0-9])[,\s]\s*([0-9])\z` .Message.Content)}}{{/* If user is playing a game, check for valid input (x,y / x,  y / x y / etc.) */}}
+{{else if and $d (eq (toInt $d.ChannelID) .Channel.ID) ($play := reFindAllSubmatches `\A(?i)(f(?:lag)?\s+)?([0-9]+)[,\s]\s*([0-9]+)\z` .Message.Content)}}{{/* If user is playing a game, check for valid input (x,y / x,  y / x y / etc.) */}}
   {{if and (lt ($x := index $play 0 2|toInt) $d.Cfg.Dims) (lt ($y := index $play 0 3|toInt) $d.Cfg.Dims)}}{{/* Check that play is within bounds (no need for negative check as regex only matches positive ints) */}}
     {{$good := true}}
 
@@ -113,12 +114,12 @@
 {{if $d}}{{dbSet .User.ID "minesweeper" $d}}{{else}}{{dbDel .User.ID "minesweeper"}}{{end}}
 
 {{define "display"}}{{/* "display" returns the board in a human readable format */}}
-  {{- $m := "  -"}}{{$y := "   "}}
+  {{- $m := printf "%*s" .Width " -"}}{{$y := printf "%*s" .Width ""}}
 
   {{- /* Make it look nice -- add line of '-' between top and minefield */}}
   {{- range seq 0 .Cfg.Dims}}
     {{- $m = print $m "---"}}
-    {{- $y = printf "%s%d  " $y .}}
+    {{- $y = printf "%s%-3d" $y .}}
   {{- end}}
 
   {{- $m = print $m "\n"}}
@@ -131,12 +132,12 @@
       {{- $line = printf "%s|%-2c" $line $chr}}
     {{- end}}
 
-    {{- $m = print $i " " $line "|\n" $m}}
+    {{- $m = printf "%-*d%s|\n%s" (sub $.Width 1) $i $line $m}}
   {{- end}}
 
   {{- /* See above, make it look nice */}}
-  {{- $m = print "\n" $m}}{{range seq 0 .Cfg.Dims}}{{$m = print "---" $m}}{{end}}{{$m = print "  -" $m}}
-  {{- return print $m  $y -}}
+  {{- $m = print "\n" $m}}{{range seq 0 .Cfg.Dims}}{{$m = print "---" $m}}{{end}}{{$m = printf "%*s%s%s" $.Width " -" $m $y}}
+  {{- return $m -}}
 {{end}}
 
 {{define "dig"}}{{/* "dig" digs a given tile, and returns a boolean if it was a safe move -- "dig" recurses if an empty tile was dug to dig all 0 valued and neighbouring tiles */}}
