@@ -128,7 +128,7 @@
     {{- $line := ""}}
     {{- range $l}}
       {{- $chr := ' '}}{{if .Flag}}{{$chr = $.Cfg.Flag}}{{end}}
-      {{- if .Dug}}{{$chr = add .Val 48}}{{if eq .Val -1}}{{$chr = '*'}}{{end}}{{end}}
+      {{- if .Dug}}{{$chr = add .Val 48}}{{if eq .Val -1}}{{$chr = '*'}}{{else if not .Val}}{{$chr = 46}}{{end}}{{end}}
       {{- $line = printf "%s|%-2c" $line $chr}}
     {{- end}}
 
