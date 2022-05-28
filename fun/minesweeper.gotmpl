@@ -98,7 +98,7 @@
       {{/* If error is on user target (not from recursing), send error message */}}
       {{if $d.Err}}{{if and (eq $d.Err.Y $d.Y) (eq $d.Err.X $d.X)}}{{$d.Err.S}}! {{deleteResponse 15}}{{end}}{{end}}
 
-      {{if gt $d.Dug (sub (pow $d.Cfg.Dims 2) $d.Cfg.Mines | toInt)}}{{/* If all squares dug (excluding bombs) user won the game */}}
+      {{if ge $d.Dug (sub (pow $d.Cfg.Dims 2) $d.Cfg.Mines | toInt)}}{{/* If all squares dug (excluding bombs) user won the game */}}
         Game over, you won!!!!
         {{$d = sdict}}
       {{end}}
@@ -116,7 +116,7 @@
 {{define "display"}}{{/* "display" returns the board in a human readable format */}}
   {{- $m := printf "%*s" .Width " -"}}{{$y := printf "%*s" .Width ""}}
 
-  {{- /* Make it look nice -- add line of '-' between top and minefield */}}
+  {{- /* Make it look nice -- add line of '-' between top and minefield, space x axis indices */}}
   {{- range seq 0 .Cfg.Dims}}
     {{- $m = print $m "---"}}
     {{- $y = printf "%s%-3d" $y .}}
@@ -126,9 +126,9 @@
 
   {{- range $i, $l := .Board}}{{/* Print board after proper data has been inserted */}}
     {{- $line := ""}}
-    {{- range $l}}
-      {{- $chr := ' '}}{{if .Flag}}{{$chr = $.Cfg.Flag}}{{end}}
-      {{- if .Dug}}{{$chr = add .Val 48}}{{if eq .Val -1}}{{$chr = '*'}}{{else if not .Val}}{{$chr = 46}}{{end}}{{end}}
+    {{- range $l}}{{$chr := ' '}}
+      {{- if .Flag}}{{$chr = $.Cfg.Flag}}
+      {{- else if .Dug}}{{$chr = or (and (eq .Val -1) '*') (and (not .Val) 46) (add .Val 48)}}{{end}}
       {{- $line = printf "%s|%-2c" $line $chr}}
     {{- end}}
 
@@ -136,6 +136,7 @@
   {{- end}}
 
   {{- /* See above, make it look nice */}}
+
   {{- $m = print "\n" $m}}{{range seq 0 .Cfg.Dims}}{{$m = print "---" $m}}{{end}}{{$m = printf "%*s%s%s" $.Width " -" $m $y}}
   {{- return $m -}}
 {{end}}
