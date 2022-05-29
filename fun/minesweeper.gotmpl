@@ -87,8 +87,9 @@
     {{if index $play 0 1}}{{(index $d.Board $y $x).Set "Flag" (not (index $d.Board $y $x).Flag)}}
     {{else}}
       {{/* Set X and Y, dig tile */}}
-      {{$d.Set "Y" $y}}{{$d.Set "X" $x}}{{$d.Set "Depth" 0}}
+      {{$d.Set "Y" $y}}{{$d.Set "X" $x}}
       {{$good = execTemplate "dig" $d}}
+      {{$d.Del "Recursed"}}
     {{end}}
 
     {{if $good}}{{/* If mine wasn't hit, update board */}}
@@ -96,7 +97,7 @@
       {{deleteTrigger 5}}
 
       {{/* If error is on user target (not from recursing), send error message */}}
-      {{if $d.Err}}{{if and (eq $d.Err.Y $d.Y) (eq $d.Err.X $d.X)}}{{$d.Err.S}}! {{deleteResponse 15}}{{end}}{{end}}
+      {{if $d.Err}}{{$d.Err}}! {{deleteResponse 10}}{{$d.Del "Err"}}{{end}}
 
       {{if ge $d.Dug (sub (pow $d.Cfg.Dims 2) $d.Cfg.Mines | toInt)}}{{/* If all squares dug (excluding bombs) user won the game */}}
         Game over, you won!!!!
@@ -144,8 +145,8 @@
 {{define "dig"}}{{/* "dig" digs a given tile, and returns a boolean if it was a safe move -- "dig" recurses if an empty tile was dug to dig all 0 valued and neighbouring tiles */}}
   {{- $curr := index .Board .Y .X}}
 
-  {{- if $curr.Flag}}{{/* If tile is flagged, don't dig, return safe move status, error */}}
-    {{- .Set "Err" (sdict "Y" .Y "X" .X "S" "Tile is flagged")}}
+  {{- if and $curr.Flag}}{{/* If tile is flagged, don't dig, return safe move status, error */}}
+    {{- .Set "Err" (and (not .Recursed) "Tile is flagged")}}
     {{- return true}}
   {{- end}}
 
@@ -166,7 +167,7 @@
       {{- if (index $.Board $r $c).Dug}}{{continue}}{{end}}
 
       {{- /* Continue recursing until a non-zero value or bomb is reached, ignore bombs being dug */}}
-      {{- $.Set "Y" $r}}{{$.Set "X" $c}}
+      {{- $.Set "Y" $r}}{{$.Set "X" $c}}{{$.Set "Recursed" true}}
       {{- $_ := execTemplate "dig" $}}
     {{- end}}
   {{- end}}
