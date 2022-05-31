@@ -54,8 +54,8 @@
         {{- if eq (index $d.Board $y $x).Val -1}}{{continue}}{{end}}{{/* Ignore bomb tiles */}}
 
         {{- $neighbours := 0}}
-        {{- $a := seq (sub $y 1 | cslice 0 | execTemplate "max") (cslice (sub $d.Cfg.Dims 1) (add $y 1) | execTemplate "min" | add 1)}}
-        {{- $b := seq (sub $x 1 | cslice 0 | execTemplate "max") (cslice (sub $d.Cfg.Dims 1) (add $x 1) | execTemplate "min" | add 1)}}
+        {{- $a := seq (sub $y 1 | max 0 ) (min (sub $d.Cfg.Dims 1) (add $y 1) | add 1)}}
+        {{- $b := seq (sub $x 1 | max 0 ) (min (sub $d.Cfg.Dims 1) (add $x 1) | add 1)}}
 
         {{- range $r := $a}}
           {{- range $c := $b}}
@@ -148,8 +148,8 @@
   {{- end}}
 
   {{- if and $curr.Dug (not .Recursed)}}{{/* If tile is dug, check surrounding flags, if satisfied dig unflagged neighbours */}}
-    {{- $a := seq (sub .Y 1 | cslice 0 | execTemplate "max") (cslice (add .Y 1) (sub .Cfg.Dims 1) | execTemplate "min" | add 1)}}
-    {{- $b := seq (sub .X 1 | cslice 0 | execTemplate "max") (cslice (add .X 1) (sub .Cfg.Dims 1) | execTemplate "min" | add 1)}}
+    {{- $a := seq (sub .Y 1 | max 0) (min (add .Y 1) (sub .Cfg.Dims 1) | add 1)}}
+    {{- $b := seq (sub .X 1 | max 0) (min (add .X 1) (sub .Cfg.Dims 1) | add 1)}}
 
     {{- $flags := 0}}{{/* Count of the flags we've seen */}}
 
@@ -182,8 +182,8 @@
     {{- /* (index .Board .Y .X).Val == 0, recursively dig neighbouring tiles */}}
 
     {{- /* Stay within bounds of neighbouring tiles for this recursion */}}
-    {{- $a := seq (sub .Y 1 | cslice 0 | execTemplate "max") (cslice (add .Y 1) (sub .Cfg.Dims 1) | execTemplate "min" | add 1)}}
-    {{- $b := seq (sub .X 1 | cslice 0 | execTemplate "max") (cslice (add .X 1) (sub .Cfg.Dims 1) | execTemplate "min" | add 1)}}
+    {{- $a := seq (sub .Y 1 | max 0) (min (add .Y 1) (sub .Cfg.Dims 1) | add 1)}}
+    {{- $b := seq (sub .X 1 | max 0) (min (add .X 1) (sub .Cfg.Dims 1) | add 1)}}
 
     {{- range $r := $a}}
       {{- range $c := $b}}
@@ -199,7 +199,3 @@
     {{- return true}}{{/* User dug 0, this is a valid move */}}
   {{- end -}}
 {{end}}
-
-{{/* Helpers for getting min/max of two values */}}
-{{define "min"}}{{if lt (index . 0) (index . 1)}}{{return index . 0}}{{end}}{{return index . 1}}{{end}}
-{{define "max"}}{{if gt (index . 0) (index . 1)}}{{return index . 0}}{{end}}{{return index . 1}}{{end}}
