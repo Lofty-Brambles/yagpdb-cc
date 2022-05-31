@@ -96,7 +96,7 @@
       {{editMessage nil $d.MessageID (printf "Enter `x, y` to dig, `flag x, y` to flag\n```\n%s```" (execTemplate "display" $d) )}}
       {{deleteTrigger 5}}
 
-      {{/* If error is on user target (not from recursing), send error message */}}
+      {{/* If error is on user target (not from recursing), send error message (currently only if digging a flagged tile is attempted) */}}
       {{if $d.Err}}{{$d.Err}}! {{deleteResponse 10}}{{$d.Del "Err"}}{{end}}
 
       {{if ge $d.Dug (sub (pow $d.Cfg.Dims 2) $d.Cfg.Mines | toInt)}}{{/* If all squares dug (excluding bombs) user won the game */}}
@@ -142,38 +142,65 @@
   {{- return $m -}}
 {{end}}
 
-{{define "dig"}}{{/* "dig" digs a given tile, and returns a boolean if it was a safe move -- "dig" recurses if an empty tile was dug to dig all 0 valued and neighbouring tiles */}}
+{{define "dig"}}{{/* "dig" digs a given tile, and returns a boolean if it was a safe move; "dig" recurses if an empty tile was dug to dig all 0 valued and neighbouring tiles */}}
   {{- $curr := index .Board .Y .X}}
 
-  {{- if and $curr.Flag}}{{/* If tile is flagged, don't dig, return safe move status, error */}}
+  {{- if $curr.Flag}}{{/* If tile is flagged, don't dig, return safe move status, error */}}
     {{- .Set "Err" (and (not .Recursed) "Tile is flagged")}}
     {{- return true}}
   {{- end}}
 
-  {{- .Set "Dug" (add .Dug 1)}}{{$curr.Set "Dug" true}}
+  {{- if and $curr.Dug (not .Recursed)}}{{/* If tile is dug, check surrounding flags, if satisfied dig unflagged neighbours */}}
+    {{- $a := seq (sub .Y 1 | cslice 0 | execTemplate "max") (cslice (add .Y 1) (sub .Cfg.Dims 1) | execTemplate "min" | add 1)}}
+    {{- $b := seq (sub .X 1 | cslice 0 | execTemplate "max") (cslice (add .X 1) (sub .Cfg.Dims 1) | execTemplate "min" | add 1)}}
 
-  {{- if eq $curr.Val -1}}{{return false}}
-  {{- else if gt $curr.Val 0}}{{return true}}{{end}}
+    {{- $flags := 0}}{{/* Count of the flags we've seen */}}
 
-  {{- /* (index .Board .Y .X).Val == 0, recursively dig neighbouring tiles */}}
-
-  {{- /* Stay within bounds of neighbouring tiles for this recursion */}}
-  {{- $a := seq (sub .Y 1 | cslice 0 | execTemplate "max") (cslice (add .Y 1) (sub .Cfg.Dims 1) | execTemplate "min" | add 1)}}
-  {{- $b := seq (sub .X 1 | cslice 0 | execTemplate "max") (cslice (add .X 1) (sub .Cfg.Dims 1) | execTemplate "min" | add 1)}}
-
-  {{- range $r := $a}}
-    {{- range $c := $b}}
-      {{- /* If tile was already dug, don't dig again */}}
-      {{- if (index $.Board $r $c).Dug}}{{continue}}{{end}}
-
-      {{- /* Continue recursing until a non-zero value or bomb is reached, ignore bombs being dug */}}
-      {{- $.Set "Y" $r}}{{$.Set "X" $c}}{{$.Set "Recursed" true}}
-      {{- $_ := execTemplate "dig" $}}
+    {{- range $r := $a}}
+      {{- range $c := $b}}
+        {{- if (index $.Board $r $c).Flag}}{{$flags = add $flags 1}}{{end}}
+      {{- end}}
     {{- end}}
-  {{- end}}
 
-  {{- /* User dug "0", this is and unconditionally valid play */}}
-  {{- return true}}
+    {{- if eq $flags $curr.Val}}{{/* If the tile is satisfied by surrounding flags, dig unflagged neighbours */}}
+      {{- range $r := $a}}
+        {{- range $c := $b}}
+          {{- if not (index $.Board $r $c).Flag}}
+            {{- $.Set "Y" $r}}{{$.Set "X" $c}}{{$.Set "Recursed" true}}
+            {{- $safe := execTemplate "dig" $}}
+
+            {{- if not $safe}}{{return false}}{{end}}{{/* If a mine wasn't flagged, return unsafe status */}}
+          {{- end}}
+        {{- end}}
+      {{- end}}
+    {{- end}}
+
+    {{- return true}}{{/* All flagged tiles were correct, a valid move */}}
+  {{- else}}
+    {{- .Set "Dug" (add .Dug 1)}}{{$curr.Set "Dug" true}}
+
+    {{- if eq $curr.Val -1}}{{return false}}
+    {{- else if gt $curr.Val 0}}{{return true}}{{end}}
+
+    {{- /* (index .Board .Y .X).Val == 0, recursively dig neighbouring tiles */}}
+
+    {{- /* Stay within bounds of neighbouring tiles for this recursion */}}
+    {{- $a := seq (sub .Y 1 | cslice 0 | execTemplate "max") (cslice (add .Y 1) (sub .Cfg.Dims 1) | execTemplate "min" | add 1)}}
+    {{- $b := seq (sub .X 1 | cslice 0 | execTemplate "max") (cslice (add .X 1) (sub .Cfg.Dims 1) | execTemplate "min" | add 1)}}
+
+    {{- range $r := $a}}
+      {{- range $c := $b}}
+        {{- /* If tile was already dug, don't dig again */}}
+        {{- if (index $.Board $r $c).Dug}}{{continue}}{{end}}
+
+        {{- /* Continue recursing until a non-zero value or bomb is reached, ignore bombs being dug */}}
+        {{- $.Set "Y" $r}}{{$.Set "X" $c}}{{$.Set "Recursed" true}}
+        {{- $_ := execTemplate "dig" $}}
+      {{- end}}
+    {{- end}}
+
+    {{- return true}}{{/* User dug 0, this is a valid move */}}
+  {{- end -}}
 {{end}}
 
 {{/* Helpers for getting min/max of two values */}}

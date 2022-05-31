@@ -24,4 +24,10 @@ Choose your own custom minefield size, number of bombs, and more.
 Easy to understand user interface, simply type coordinates to dig or flag a tile!  
 No setup is required, the game is fully playable out of the box.  
 
-Credit to <https://github.com/kying18/minesweeper/blob/main/minesweeper.py>, this is largely based on this script!  
+Gameplay overview:
+- Play until you've determined where all mines are located and dug all other tiles
+- Each move can either be digging a tile, flagging a tile, or digging neighbouring tiles to an already-dug tile that is satisfied by surrounding flags
+- Flagged tiles cannot be dug, only when they are unflagged will this be possible again
+- Digging a tile with 0 surrounding flags will dig all surrounding tiles until a tile neighbouring a mine is found
+
+Credit to [kying18](https://github.com/kying18), this is partially based on [this python script](https://github.com/kying18/minesweeper/blob/main/minesweeper.py)!  
