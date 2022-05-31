@@ -31,7 +31,7 @@
       "Width" (sub $cfg.Dims 1 | str | len | add 2)
     }}
 
-    {{/* Initialise the minefield -- create 2d slice with each tile set to "" */}}
+    {{/* Initialise the minefield (2d slice, rows of tiles) */}}
     {{range $y := seq 0 $d.Cfg.Dims}}
       {{- $d.Set "Board" ($d.Board.Append cslice)}}
       {{- range seq 0 $d.Cfg.Dims}}{{$d.Board.Set $y ( (index $d.Board $y).Append (sdict "Val" 0 "Dug" false "Flag" false) )}}{{end}}
@@ -53,7 +53,7 @@
       {{- range $x := seq 0 $d.Cfg.Dims}}
         {{- if eq (index $d.Board $y $x).Val -1}}{{continue}}{{end}}{{/* Ignore bomb tiles */}}
 
-        {{- $neighbours := 0}}{{/* Stay within bounds (only check neighbouring tiles for bombs) */}}
+        {{- $neighbours := 0}}
         {{- $a := seq (sub $y 1 | cslice 0 | execTemplate "max") (cslice (sub $d.Cfg.Dims 1) (add $y 1) | execTemplate "min" | add 1)}}
         {{- $b := seq (sub $x 1 | cslice 0 | execTemplate "max") (cslice (sub $d.Cfg.Dims 1) (add $x 1) | execTemplate "min" | add 1)}}
 
@@ -96,7 +96,6 @@
       {{editMessage nil $d.MessageID (printf "Enter `x, y` to dig, `flag x, y` to flag\n```\n%s```" (execTemplate "display" $d) )}}
       {{deleteTrigger 5}}
 
-      {{/* If error is on user target (not from recursing), send error message (currently only if digging a flagged tile is attempted) */}}
       {{if $d.Err}}{{$d.Err}}! {{deleteResponse 10}}{{$d.Del "Err"}}{{end}}
 
       {{if ge $d.Dug (sub (pow $d.Cfg.Dims 2) $d.Cfg.Mines | toInt)}}{{/* If all squares dug (excluding bombs) user won the game */}}
@@ -135,8 +134,6 @@
 
     {{- $m = printf "%-*d%s|\n%s" (sub $.Width 1) $i $line $m}}
   {{- end}}
-
-  {{- /* See above, make it look nice */}}
 
   {{- $m = print "\n" $m}}{{range seq 0 .Cfg.Dims}}{{$m = print "---" $m}}{{end}}{{$m = printf "%*s%s%s" $.Width " -" $m $y}}
   {{- return $m -}}
