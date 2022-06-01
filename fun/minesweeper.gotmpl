@@ -11,7 +11,7 @@
 {{$cfg := sdict
   "Cmd" `\A(?i)(?-i:-|<@!?204255221017214977>)\s*mines(?:weeper)?(?:\s+|\z)`
   "Dims" 16
-  "Mines" 20
+  "Mines" 40
   "Flag" '>'
 }}
 
@@ -28,13 +28,14 @@
       "Cfg" $cfg
       "Board" cslice
       "Dug" 0
+      "Seq" (seq 0 $cfg.Dims)
       "Width" (sub $cfg.Dims 1 | str | len | add 2)
     }}
 
     {{/* Initialise the minefield (2d slice, rows of tiles) */}}
-    {{range $y := seq 0 $d.Cfg.Dims}}
+    {{range $y := $d.Seq}}
       {{- $d.Set "Board" ($d.Board.Append cslice)}}
-      {{- range seq 0 $d.Cfg.Dims}}{{$d.Board.Set $y ( (index $d.Board $y).Append (sdict "Val" 0 "Dug" false "Flag" false) )}}{{end}}
+      {{- range $d.Seq}}{{$d.Board.Set $y ( (index $d.Board $y).Append (sdict "Val" 0 "Dug" false "Flag" false) )}}{{end}}
     {{- end}}
 
     {{- $numMines := 0}}{{/* Place mines randomly until all are placed */}}
@@ -49,13 +50,13 @@
     {{- end}}
 
     {{- /* Calculate numbered tiles */}}
-    {{- range $y := seq 0 $d.Cfg.Dims}}
-      {{- range $x := seq 0 $d.Cfg.Dims}}
+    {{- range $y := $d.Seq}}
+      {{- range $x := $d.Seq}}
         {{- if eq (index $d.Board $y $x).Val -1}}{{continue}}{{end}}{{/* Ignore bomb tiles */}}
 
         {{- $neighbours := 0}}
-        {{- $a := seq (sub $y 1 | max 0 ) (min (sub $d.Cfg.Dims 1) (add $y 1) | add 1)}}
-        {{- $b := seq (sub $x 1 | max 0 ) (min (sub $d.Cfg.Dims 1) (add $x 1) | add 1)}}
+        {{- $a := seq (sub $y 1 | max 0 | toInt) (min (sub $d.Cfg.Dims 1) (add $y 1) | add 1)}}
+        {{- $b := seq (sub $x 1 | max 0 | toInt) (min (sub $d.Cfg.Dims 1) (add $x 1) | add 1)}}
 
         {{- range $r := $a}}
           {{- range $c := $b}}
@@ -70,7 +71,7 @@
     {{$d.Set "MessageID" (sendMessageRetID nil (printf "Your game has begun! Enter `x, y` to dig, `flag x, y` to flag\n```\n%s```" (execTemplate "display" $d) ) )}}
   {{else}}{{$err = "You're already in a game (tip: use `-minesweeper end`)"}}{{end}}{{else if eq $cmd "end"}}{{if $d}}
     {{/* End existing game, show full unfinished board in new message */}}
-    {{range $y := seq 0 $d.Cfg.Dims}}{{range $x := seq 0 $d.Cfg.Dims}}{{(index $d.Board $y $x).Set "Dug" true}}{{end}}{{end}}
+    {{range $y := $d.Seq}}{{range $x := $d.Seq}}{{(index $d.Board $y $x).Set "Dug" true}}{{end}}{{end}}
     {{printf "Ended your game!\n```\n%s```" (execTemplate "display" $d)}}
     {{$d = sdict}}
   {{else}}{{$err = "No ongoing game found"}}{{end}}{{else if eq $cmd "fetch"}}{{if $d}}
@@ -82,7 +83,7 @@
   {{if $err}}{{print $syntax "\nInvalid arguments provided: " $err}}{{end}}
 {{else if and $d (eq (toInt $d.ChannelID) .Channel.ID) ($play := reFindAllSubmatches `\A(?i)(f(?:lag)?\s+)?([0-9]+)[,\s]\s*([0-9]+)\z` .Message.Content)}}{{/* If user is playing a game, check for valid input (x,y / x,  y / x y / etc.) */}}
   {{if and (lt ($x := index $play 0 2|toInt) $d.Cfg.Dims) (lt ($y := index $play 0 3|toInt) $d.Cfg.Dims)}}{{/* Check that play is within bounds (no need for negative check as regex only matches positive ints) */}}
-    {{$good := true}}
+    {{$good := true}}{{$m := ""}}
 
     {{if index $play 0 1}}{{(index $d.Board $y $x).Set "Flag" (not (index $d.Board $y $x).Flag)}}
     {{else}}
@@ -98,13 +99,12 @@
 
       {{if $d.Err}}{{$d.Err}}! {{deleteResponse 10}}{{$d.Del "Err"}}{{end}}
 
-      {{if ge $d.Dug (sub (pow $d.Cfg.Dims 2) $d.Cfg.Mines | toInt)}}{{/* If all squares dug (excluding bombs) user won the game */}}
-        Game over, you won!!!!
-        {{$d = sdict}}
-      {{end}}
-    {{else}}{{/* Mine was hit, show full board in new message */}}
-      {{range $y := seq 0 $d.Cfg.Dims}}{{range $x := seq 0 $d.Cfg.Dims}}{{(index $d.Board $y $x).Set "Dug" true}}{{end}}{{end}}
-      {{sendMessage nil (printf "Game over! You lost :(\n```\n%s```" (execTemplate "display" $d) )}}
+      {{if ge $d.Dug (sub (pow $d.Cfg.Dims 2) $d.Cfg.Mines | toInt)}}{{$m = "Game over, you won!!!!"}}{{end}}
+    {{else}}{{$m = "Game over! You lost :("}}{{end}}
+
+    {{if $m}}
+      {{range $y := $d.Seq}}{{range $x := $d.Seq}}{{(index $d.Board $y $x).Set "Dug" true}}{{(index $d.Board $y $x).Set "Flag" false}}{{end}}{{end}}
+      {{printf "%s\n```\n%s```" $m (execTemplate "display" $d)}}
       {{$d = sdict}}
     {{end}}
   {{else}}Invalid play, try again :({{end}}
@@ -117,7 +117,7 @@
   {{- $m := printf "%*s" .Width " -"}}{{$y := printf "%*s" .Width ""}}
 
   {{- /* Make it look nice -- add line of '-' between top and minefield, space x axis indices */}}
-  {{- range seq 0 .Cfg.Dims}}
+  {{- range .Seq}}
     {{- $m = print $m "---"}}
     {{- $y = printf "%s%-3d" $y .}}
   {{- end}}
@@ -135,7 +135,7 @@
     {{- $m = printf "%-*d%s|\n%s" (sub $.Width 1) $i $line $m}}
   {{- end}}
 
-  {{- $m = print "\n" $m}}{{range seq 0 .Cfg.Dims}}{{$m = print "---" $m}}{{end}}{{$m = printf "%*s%s%s" $.Width " -" $m $y}}
+  {{- $m = print "\n" $m}}{{range .Seq}}{{$m = print "---" $m}}{{end}}{{$m = printf "%*s%s%s" $.Width " -" $m $y}}
   {{- return $m -}}
 {{end}}
 
@@ -148,8 +148,8 @@
   {{- end}}
 
   {{- if and $curr.Dug (not .Recursed)}}{{/* If tile is dug, check surrounding flags, if satisfied dig unflagged neighbours */}}
-    {{- $a := seq (sub .Y 1 | max 0) (min (add .Y 1) (sub .Cfg.Dims 1) | add 1)}}
-    {{- $b := seq (sub .X 1 | max 0) (min (add .X 1) (sub .Cfg.Dims 1) | add 1)}}
+    {{- $a := seq (sub .Y 1 | max 0 | toInt) (min (add .Y 1) (sub .Cfg.Dims 1) | add 1)}}
+    {{- $b := seq (sub .X 1 | max 0 | toInt) (min (add .X 1) (sub .Cfg.Dims 1) | add 1)}}
 
     {{- $flags := 0}}{{/* Count of the flags we've seen */}}
 
@@ -182,8 +182,8 @@
     {{- /* (index .Board .Y .X).Val == 0, recursively dig neighbouring tiles */}}
 
     {{- /* Stay within bounds of neighbouring tiles for this recursion */}}
-    {{- $a := seq (sub .Y 1 | max 0) (min (add .Y 1) (sub .Cfg.Dims 1) | add 1)}}
-    {{- $b := seq (sub .X 1 | max 0) (min (add .X 1) (sub .Cfg.Dims 1) | add 1)}}
+    {{- $a := seq (sub .Y 1 | max 0 | toInt) (min (add .Y 1) (sub .Cfg.Dims 1) | add 1)}}
+    {{- $b := seq (sub .X 1 | max 0 | toInt) (min (add .X 1) (sub .Cfg.Dims 1) | add 1)}}
 
     {{- range $r := $a}}
       {{- range $c := $b}}
